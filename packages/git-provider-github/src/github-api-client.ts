@@ -1,4 +1,4 @@
-import type { Issue } from "@superset/git-provider-core";
+import type { Issue, Repository } from "@superset/git-provider-core";
 
 const API = "https://api.github.com";
 
@@ -14,6 +14,43 @@ type RawIssue = {
 	updated_at: string;
 	pull_request?: unknown;
 };
+
+type RawRepository = {
+	id: number;
+	full_name: string;
+	name: string;
+	owner: { login: string };
+	description: string | null;
+	clone_url: string;
+	ssh_url: string;
+	html_url: string;
+	private: boolean;
+	fork: boolean;
+	archived: boolean;
+	default_branch: string;
+	stargazers_count: number;
+	updated_at: string;
+};
+
+function mapRepository(r: RawRepository): Repository {
+	return {
+		id: `gh:${r.full_name}`,
+		provider: "github",
+		fullName: r.full_name,
+		name: r.name,
+		owner: r.owner.login,
+		description: r.description ?? undefined,
+		cloneUrl: r.clone_url,
+		sshUrl: r.ssh_url,
+		htmlUrl: r.html_url,
+		isPrivate: r.private,
+		isFork: r.fork,
+		isArchived: r.archived,
+		defaultBranch: r.default_branch,
+		stars: r.stargazers_count,
+		updatedAt: r.updated_at,
+	};
+}
 
 function mapIssue(owner: string, repo: string, i: RawIssue): Issue {
 	return {
@@ -87,6 +124,27 @@ export function createGitHubClient(token: string) {
 				throw new Error(`GitHub API ${res.status}: ${await res.text()}`);
 			}
 			return mapIssue(owner, repo, (await res.json()) as RawIssue);
+		},
+
+		async listRepositories(
+			visibility: "all" | "public" | "private" = "all",
+		): Promise<Repository[]> {
+			const collected: RawRepository[] = [];
+			let page = 1;
+			while (page <= 10) {
+				const res = await fetch(
+					`${API}/user/repos?visibility=${visibility}&per_page=100&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member`,
+					{ headers },
+				);
+				if (!res.ok) {
+					throw new Error(`GitHub API ${res.status}: ${await res.text()}`);
+				}
+				const batch = (await res.json()) as RawRepository[];
+				collected.push(...batch);
+				if (batch.length < 100) break;
+				page += 1;
+			}
+			return collected.map(mapRepository);
 		},
 	};
 }

@@ -123,6 +123,23 @@ export const createGitProvidersRouter = () => {
 		listConfigured: publicProcedure.query(() =>
 			gitProviderRegistry.listConfigured(),
 		),
+
+		listRepositories: publicProcedure
+			.input(
+				z.object({
+					provider: ProviderNameSchema,
+					visibility: z.enum(["all", "public", "private"]).optional(),
+				}),
+			)
+			.query(async ({ input }) => {
+				const provider = gitProviderRegistry.getIssueProvider(input.provider);
+				if (!provider?.listRepositories) {
+					throw new Error(
+						`Provider ${input.provider} does not support listRepositories`,
+					);
+				}
+				return provider.listRepositories({ visibility: input.visibility });
+			}),
 	});
 };
 

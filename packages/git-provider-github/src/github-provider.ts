@@ -40,4 +40,9 @@ export const githubProvider: IssueProvider = {
 		const client = await getAuthedClient();
 		return client.createIssue(owner, repo, title, body);
 	},
+
+	async listRepositories({ visibility = "all" } = {}) {
+		const client = await getAuthedClient();
+		return client.listRepositories(visibility);
+	},
 };

@@ -18,6 +18,25 @@ export const IssueSchema = z.object({
 });
 export type Issue = z.infer<typeof IssueSchema>;
 
+export const RepositorySchema = z.object({
+	id: z.string(), // e.g. "gh:owner/repo"
+	provider: ProviderNameSchema,
+	fullName: z.string(), // "owner/repo"
+	name: z.string(),
+	owner: z.string(),
+	description: z.string().optional(),
+	cloneUrl: z.string(), // HTTPS clone URL
+	sshUrl: z.string(),
+	htmlUrl: z.string(),
+	isPrivate: z.boolean(),
+	isFork: z.boolean(),
+	isArchived: z.boolean(),
+	defaultBranch: z.string(),
+	stars: z.number(),
+	updatedAt: z.string(),
+});
+export type Repository = z.infer<typeof RepositorySchema>;
+
 export interface IssueProvider {
 	readonly name: ProviderName;
 	canHandle(remoteUrl: string): boolean;
@@ -31,6 +50,10 @@ export interface IssueProvider {
 		title: string;
 		body?: string;
 	}): Promise<Issue>;
+	/** Optional: list repositories accessible to the configured account. */
+	listRepositories?(opts?: {
+		visibility?: "all" | "public" | "private";
+	}): Promise<Repository[]>;
 }
 
 export interface AuthProvider {
