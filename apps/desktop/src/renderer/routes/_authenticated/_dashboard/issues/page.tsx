@@ -1,9 +1,7 @@
 import { Spinner } from "@superset/ui/spinner";
-import { useLiveQuery } from "@tanstack/react-db";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
-import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import { ProviderSetupCTA } from "../tasks/components/TasksView/components/ProviderSetupCTA";
 import { IssuesKanbanBoard } from "./components/IssuesKanbanBoard";
 
@@ -12,15 +10,8 @@ export const Route = createFileRoute("/_authenticated/_dashboard/issues/")({
 });
 
 function IssuesPage() {
-	const collections = useCollections();
-
-	const { data: projects, isLoading: isProjectsLoading } = useLiveQuery(
-		(q) =>
-			q
-				.from({ projects: collections.projects })
-				.select(({ projects }) => ({ ...projects })),
-		[collections],
-	);
+	const { data: projects, isLoading: isProjectsLoading } =
+		electronTrpc.projects.getRecents.useQuery();
 
 	const projectOptions = useMemo(() => projects ?? [], [projects]);
 
