@@ -2,9 +2,9 @@ export function parseGitHubRemote(
 	url: string,
 ): { owner: string; repo: string } | null {
 	const patterns = [
-		/^git@github\.com:([^/]+)\/([^/.]+)(?:\.git)?$/,
-		/^ssh:\/\/git@github\.com\/([^/]+)\/([^/.]+)(?:\.git)?$/,
-		/^https?:\/\/github\.com\/([^/]+)\/([^/.]+)(?:\.git)?(?:\/.*)?$/,
+		/^git@github\.com:([^/\s]+?)\/([^/\s]+?)(?:\.git)?$/i,
+		/^ssh:\/\/git@github\.com\/([^/\s]+?)\/([^/\s]+?)(?:\.git)?$/i,
+		/^https?:\/\/github\.com\/([^/\s]+?)\/([^/\s?#]+?)(?:\.git)?(?:[/?#].*)?$/i,
 	];
 	for (const re of patterns) {
 		const m = url.match(re);
