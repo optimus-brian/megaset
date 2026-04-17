@@ -1,5 +1,7 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { gitProviderRegistry } from "@superset/git-provider-core";
+import { githubProvider } from "@superset/git-provider-github";
 import { settings } from "@superset/local-db";
 import {
 	app,
@@ -40,6 +42,9 @@ import {
 } from "./lib/terminal";
 import { disposeTray, initTray } from "./lib/tray";
 import { MainWindow } from "./windows/main";
+
+// Register pluggable git providers (see packages/git-provider-*).
+gitProviderRegistry.registerIssueProvider(githubProvider);
 
 console.log("[main] Local database ready:", !!localDb);
 const IS_DEV = process.env.NODE_ENV === "development";

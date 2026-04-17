@@ -82,6 +82,8 @@
 		"@superset/chat": "workspace:*",
 		"@superset/db": "workspace:*",
 		"@superset/desktop-mcp": "workspace:*",
+		"@superset/git-provider-core": "workspace:*",
+		"@superset/git-provider-github": "workspace:*",
 		"@superset/host-service": "workspace:*",
 		"@superset/local-db": "workspace:*",
 		"@superset/macos-process-metrics": "workspace:*",

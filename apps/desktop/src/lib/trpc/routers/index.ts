@@ -12,6 +12,7 @@ import { createChatServiceRouter } from "./chat-service";
 import { createConfigRouter } from "./config";
 import { createExternalRouter } from "./external";
 import { createFilesystemRouter } from "./filesystem";
+import { createGitProvidersRouter } from "./git-providers";
 import { createHostServiceCoordinatorRouter } from "./host-service-coordinator";
 import { createMenuRouter } from "./menu";
 import { createModelProvidersRouter } from "./model-providers";
@@ -50,6 +51,7 @@ export const createAppRouter = (getWindow: () => BrowserWindow | null) => {
 		resourceMetrics: createResourceMetricsRouter(),
 		menu: createMenuRouter(),
 		external: createExternalRouter(),
+		gitProviders: createGitProvidersRouter(),
 		settings: createSettingsRouter(),
 		config: createConfigRouter(),
 		uiState: createUiStateRouter(),
