@@ -9,7 +9,8 @@ export function usePaywall() {
 
 	function hasAccess(feature: GatedFeature): boolean {
 		void feature;
-		return userPlan === "pro" || userPlan === "enterprise";
+		// Self-hosted fork: all paywall gates are disabled.
+		return true;
 	}
 
 	function gateFeature(

@@ -23,6 +23,7 @@ import {
 	SETTING_ITEM_ID,
 	type SettingItemId,
 } from "../../../utils/settings-search";
+import { GitProvidersSection } from "../GitProvidersSection";
 
 interface GitSettingsProps {
 	visibleItems?: SettingItemId[] | null;
@@ -47,6 +48,10 @@ export function GitSettings({ visibleItems }: GitSettingsProps) {
 	);
 	const showProjectsDirectory = isItemVisible(
 		SETTING_ITEM_ID.GIT_PROJECTS_DIRECTORY,
+		visibleItems,
+	);
+	const showGitProviderGithub = isItemVisible(
+		SETTING_ITEM_ID.GIT_PROVIDER_GITHUB,
 		visibleItems,
 	);
 
@@ -421,6 +426,7 @@ export function GitSettings({ visibleItems }: GitSettingsProps) {
 						</div>
 					</div>
 				)}
+				{showGitProviderGithub && <GitProvidersSection />}
 			</div>
 		</div>
 	);
