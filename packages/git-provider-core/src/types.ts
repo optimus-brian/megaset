@@ -1,0 +1,41 @@
+import { z } from "zod";
+
+export type ProviderName = "github" | "onedev" | "forgejo";
+
+export const IssueSchema = z.object({
+	id: z.string(), // e.g. "gh:owner/repo#42"
+	provider: z.enum(["github", "onedev", "forgejo"]),
+	number: z.number(),
+	title: z.string(),
+	body: z.string().optional(),
+	state: z.enum(["open", "in_progress", "closed"]),
+	labels: z.array(z.string()),
+	assignees: z.array(z.string()),
+	url: z.string().url(),
+	createdAt: z.string(),
+	updatedAt: z.string(),
+});
+export type Issue = z.infer<typeof IssueSchema>;
+
+export interface IssueProvider {
+	readonly name: ProviderName;
+	canHandle(remoteUrl: string): boolean;
+	listIssues(opts: {
+		remoteUrl: string;
+		state?: "open" | "closed" | "all";
+	}): Promise<Issue[]>;
+	getIssue(opts: { remoteUrl: string; number: number }): Promise<Issue>;
+	createIssue(opts: {
+		remoteUrl: string;
+		title: string;
+		body?: string;
+	}): Promise<Issue>;
+}
+
+export interface AuthProvider {
+	readonly name: ProviderName;
+	isConfigured(): Promise<boolean>;
+	getToken(): Promise<string | null>;
+	setToken(token: string): Promise<void>;
+	clearToken(): Promise<void>;
+}
