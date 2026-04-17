@@ -1,10 +1,11 @@
 import { z } from "zod";
 
-export type ProviderName = "github" | "onedev" | "forgejo";
+export const ProviderNameSchema = z.enum(["github", "onedev", "forgejo"]);
+export type ProviderName = z.infer<typeof ProviderNameSchema>;
 
 export const IssueSchema = z.object({
 	id: z.string(), // e.g. "gh:owner/repo#42"
-	provider: z.enum(["github", "onedev", "forgejo"]),
+	provider: ProviderNameSchema,
 	number: z.number(),
 	title: z.string(),
 	body: z.string().optional(),

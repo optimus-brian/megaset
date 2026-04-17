@@ -2,12 +2,11 @@ import {
 	clearToken,
 	gitProviderRegistry,
 	loadToken,
+	ProviderNameSchema,
 	saveToken,
 } from "@superset/git-provider-core";
 import { z } from "zod";
 import { publicProcedure, router } from "../..";
-
-const providerNameSchema = z.enum(["github", "onedev", "forgejo"]);
 
 export const createGitProvidersRouter = () => {
 	return router({
@@ -45,12 +44,12 @@ export const createGitProvidersRouter = () => {
 				if (!provider) {
 					throw new Error(`No git provider registered for ${input.remoteUrl}`);
 				}
-				return await provider.createIssue(input);
+				return provider.createIssue(input);
 			}),
 
 		saveToken: publicProcedure
 			.input(
-				z.object({ provider: providerNameSchema, token: z.string().min(1) }),
+				z.object({ provider: ProviderNameSchema, token: z.string().min(1) }),
 			)
 			.mutation(async ({ input }) => {
 				await saveToken(input.provider, input.token);
@@ -58,14 +57,14 @@ export const createGitProvidersRouter = () => {
 			}),
 
 		clearToken: publicProcedure
-			.input(z.object({ provider: providerNameSchema }))
+			.input(z.object({ provider: ProviderNameSchema }))
 			.mutation(async ({ input }) => {
 				await clearToken(input.provider);
 				return { success: true };
 			}),
 
 		isConfigured: publicProcedure
-			.input(z.object({ provider: providerNameSchema }))
+			.input(z.object({ provider: ProviderNameSchema }))
 			.query(async ({ input }) => (await loadToken(input.provider)) !== null),
 
 		listConfigured: publicProcedure.query(() =>
