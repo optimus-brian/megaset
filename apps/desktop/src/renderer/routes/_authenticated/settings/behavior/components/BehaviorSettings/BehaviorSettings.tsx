@@ -8,6 +8,7 @@ import {
 	SelectValue,
 } from "@superset/ui/select";
 import { Switch } from "@superset/ui/switch";
+import { useModuleVisibility } from "renderer/hooks/useModuleVisibility";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
 	isItemVisible,
@@ -20,6 +21,8 @@ interface BehaviorSettingsProps {
 }
 
 export function BehaviorSettings({ visibleItems }: BehaviorSettingsProps) {
+	const { visibility: moduleVisibility, setModule } = useModuleVisibility();
+
 	const showConfirmQuit = isItemVisible(
 		SETTING_ITEM_ID.BEHAVIOR_CONFIRM_QUIT,
 		visibleItems,
@@ -280,6 +283,40 @@ export function BehaviorSettings({ visibleItems }: BehaviorSettingsProps) {
 						/>
 					</div>
 				)}
+
+				<div className="pt-6 border-t border-border space-y-4">
+					<div className="space-y-0.5">
+						<Label className="text-sm font-medium">Sidebar modules</Label>
+						<p className="text-xs text-muted-foreground">
+							Show or hide the Tasks, Issues and Repos buttons in the workspace
+							sidebar.
+						</p>
+					</div>
+					{(
+						[
+							{ key: "tasks", label: "Tasks (Linear)" },
+							{ key: "issues", label: "Issues (GitHub)" },
+							{ key: "repos", label: "Repos (GitHub)" },
+						] as const
+					).map(({ key, label }) => (
+						<div
+							key={key}
+							className="flex items-center justify-between pl-2"
+						>
+							<Label
+								htmlFor={`module-${key}`}
+								className="text-sm font-normal"
+							>
+								{label}
+							</Label>
+							<Switch
+								id={`module-${key}`}
+								checked={moduleVisibility[key]}
+								onCheckedChange={(enabled) => setModule(key, enabled)}
+							/>
+						</div>
+					))}
+				</div>
 			</div>
 		</div>
 	);
