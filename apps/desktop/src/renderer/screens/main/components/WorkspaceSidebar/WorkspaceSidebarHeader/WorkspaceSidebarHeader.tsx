@@ -1,7 +1,10 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
-import { HiOutlineClipboardDocumentList } from "react-icons/hi2";
+import {
+	HiOutlineClipboardDocumentList,
+	HiOutlineRectangleStack,
+} from "react-icons/hi2";
 import { LuLayers } from "react-icons/lu";
 import { GATED_FEATURES, usePaywall } from "renderer/components/Paywall";
 import { useTasksFilterStore } from "renderer/routes/_authenticated/_dashboard/tasks/stores/tasks-filter-state";
@@ -21,6 +24,7 @@ export function WorkspaceSidebarHeader({
 
 	const isWorkspacesListOpen = !!matchRoute({ to: "/workspaces" });
 	const isTasksOpen = !!matchRoute({ to: "/tasks", fuzzy: true });
+	const isIssuesOpen = !!matchRoute({ to: "/issues", fuzzy: true });
 
 	const handleWorkspacesClick = () => {
 		if (isWorkspacesListOpen) {
@@ -45,6 +49,10 @@ export function WorkspaceSidebarHeader({
 			if (lastSearch) search.search = lastSearch;
 			navigate({ to: "/tasks", search });
 		});
+	};
+
+	const handleIssuesClick = () => {
+		navigate({ to: "/issues" });
 	};
 
 	if (isCollapsed) {
@@ -89,6 +97,27 @@ export function WorkspaceSidebarHeader({
 					<TooltipContent side="right">Tasks</TooltipContent>
 				</Tooltip>
 
+				<Tooltip delayDuration={300}>
+					<TooltipTrigger asChild>
+						<button
+							type="button"
+							onClick={handleIssuesClick}
+							className={cn(
+								"flex items-center justify-center size-8 rounded-md transition-colors",
+								isIssuesOpen
+									? "text-foreground bg-accent"
+									: "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+							)}
+						>
+							<HiOutlineRectangleStack
+								className="size-4"
+								strokeWidth={STROKE_WIDTH}
+							/>
+						</button>
+					</TooltipTrigger>
+					<TooltipContent side="right">Issues</TooltipContent>
+				</Tooltip>
+
 				<NewWorkspaceButton isCollapsed />
 			</div>
 		);
@@ -129,6 +158,25 @@ export function WorkspaceSidebarHeader({
 					/>
 				</div>
 				<span className="text-sm font-medium flex-1 text-left">Tasks</span>
+			</button>
+
+			<button
+				type="button"
+				onClick={handleIssuesClick}
+				className={cn(
+					"flex items-center gap-2 px-2 py-1.5 w-full rounded-md transition-colors",
+					isIssuesOpen
+						? "text-foreground bg-accent"
+						: "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+				)}
+			>
+				<div className="flex items-center justify-center size-5">
+					<HiOutlineRectangleStack
+						className="size-4"
+						strokeWidth={STROKE_WIDTH}
+					/>
+				</div>
+				<span className="text-sm font-medium flex-1 text-left">Issues</span>
 			</button>
 
 			<NewWorkspaceButton />
