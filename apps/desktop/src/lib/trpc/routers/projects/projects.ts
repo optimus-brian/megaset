@@ -1,7 +1,10 @@
 import { existsSync, statSync } from "node:fs";
 import { access, mkdir, rm } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { gitProviderRegistry } from "@superset/git-provider-core";
+import {
+	gitProviderRegistry,
+	loadToken,
+} from "@superset/git-provider-core";
 import {
 	BRANCH_PREFIX_MODES,
 	EXTERNAL_APPS,
@@ -50,6 +53,19 @@ import { discoverAndSaveProjectIcon } from "./utils/favicon-discovery";
 import { fetchGitHubOwner, getGitHubAvatarUrl } from "./utils/github";
 
 type Project = SelectProject;
+
+/**
+ * If the URL is a GitHub HTTPS URL and a GitHub PAT is configured, rewrite it
+ * to embed the token so git clone works for private repos without SSH keys.
+ * Returns the original URL for non-GitHub URLs, SSH URLs, or when no PAT is set.
+ */
+async function authenticateGitHubUrl(url: string): Promise<string> {
+	const match = url.match(/^https?:\/\/github\.com\/(.+)$/i);
+	if (!match) return url;
+	const token = await loadToken("github");
+	if (!token) return url;
+	return `https://x-access-token:${token}@github.com/${match[1]}`;
+}
 
 type OpenNewCanceled = { canceled: true };
 type OpenNewError = { canceled: false; error: string };
@@ -1275,9 +1291,24 @@ export const createProjectsRouter = (getWindow: () => BrowserWindow | null) => {
 						};
 					}
 
-					// Clone the repository
+					// Clone the repository. If it's a GitHub HTTPS URL and we have a PAT
+					// configured, embed the token so private repos work without SSH keys.
+					// After cloning, reset origin to the clean URL so the token doesn't
+					// persist in .git/config (security) and the URL parses cleanly.
 					const git = await getSimpleGitWithShellPath();
-					await git.clone(input.url, clonePath);
+					const cloneUrl = await authenticateGitHubUrl(input.url);
+					await git.clone(cloneUrl, clonePath);
+					if (cloneUrl !== input.url) {
+						try {
+							const repoGit = (await getSimpleGitWithShellPath()).cwd(clonePath);
+							await repoGit.remote(["set-url", "origin", input.url]);
+						} catch (err) {
+							console.warn(
+								"[projects.cloneRepo] Failed to reset origin URL:",
+								err,
+							);
+						}
+					}
 
 					// Create new project
 					const name = basename(clonePath);
