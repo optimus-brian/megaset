@@ -29,6 +29,7 @@ export const SETTING_ITEM_ID = {
 
 	GIT_BRANCH_PREFIX: "git-branch-prefix",
 	GIT_DELETE_LOCAL_BRANCH: "git-delete-local-branch",
+	GIT_PROVIDER_GITHUB: "git-provider-github",
 	GIT_WORKTREE_LOCATION: "git-worktree-location",
 
 	AGENTS_ENABLED: "agents-enabled",
@@ -397,6 +398,22 @@ export const SETTINGS_ITEMS: SettingsItem[] = [
 			"username",
 			"feat",
 			"custom",
+		],
+	},
+	{
+		id: SETTING_ITEM_ID.GIT_PROVIDER_GITHUB,
+		section: "git",
+		title: "GitHub provider",
+		description: "Connect GitHub with a Personal Access Token to sync issues",
+		keywords: [
+			"github",
+			"git",
+			"provider",
+			"pat",
+			"token",
+			"connect",
+			"integration",
+			"issues",
 		],
 	},
 	{

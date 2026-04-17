@@ -41,6 +41,10 @@ export function GitSettings({ visibleItems }: GitSettingsProps) {
 		SETTING_ITEM_ID.GIT_WORKTREE_LOCATION,
 		visibleItems,
 	);
+	const showGitProviderGithub = isItemVisible(
+		SETTING_ITEM_ID.GIT_PROVIDER_GITHUB,
+		visibleItems,
+	);
 
 	const utils = electronTrpc.useUtils();
 
@@ -248,7 +252,7 @@ export function GitSettings({ visibleItems }: GitSettingsProps) {
 					</div>
 				)}
 
-				<GitProvidersSection />
+				{showGitProviderGithub && <GitProvidersSection />}
 			</div>
 		</div>
 	);
