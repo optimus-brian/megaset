@@ -1,32 +1,83 @@
-import type { Issue } from "@superset/git-provider-core";
+import {
+	DndContext,
+	type DragEndEvent,
+	MouseSensor,
+	TouchSensor,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
+import type { Issue, IssueState } from "@superset/git-provider-core";
 import { IssueColumn } from "./components/IssueColumn";
 
-const COLUMNS = [
-	{ state: "open" as const, label: "Open" },
-	{ state: "in_progress" as const, label: "In Progress" },
-	{ state: "closed" as const, label: "Closed" },
-] as const;
+const DEFAULT_STATES: IssueState[] = [
+	{ id: "open", name: "Open", category: "open" },
+	{ id: "in_progress", name: "In Progress", category: "in_progress" },
+	{ id: "closed", name: "Closed", category: "closed" },
+];
 
 interface IssuesKanbanBoardProps {
 	issues: Issue[];
+	onIssueClick?: (issue: Issue) => void;
+	activeIssueId?: string;
+	onStateChange?: (issue: Issue, newCategory: Issue["state"]) => void;
+	boardId: string;
+	projectId?: string;
+	states?: IssueState[];
 }
 
-export function IssuesKanbanBoard({ issues }: IssuesKanbanBoardProps) {
-	const byState = COLUMNS.map((col) => ({
-		...col,
-		items: issues.filter((i) => i.state === col.state),
+export function IssuesKanbanBoard({
+	issues,
+	onIssueClick,
+	activeIssueId,
+	onStateChange,
+	boardId,
+	projectId,
+	states,
+}: IssuesKanbanBoardProps) {
+	// Top-level only: sub-issues are rendered nested under their parent card.
+	const topLevel = issues.filter((i) => i.parentIssueNumber == null);
+	const effectiveStates = states && states.length > 0 ? states : DEFAULT_STATES;
+	const columns = effectiveStates.map((s) => ({
+		state: s,
+		items: topLevel.filter((i) =>
+			i.stateId ? i.stateId === s.id : i.state === s.category,
+		),
 	}));
 
+	// Activate drag after small movement threshold so clicks still work.
+	const sensors = useSensors(
+		useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+		useSensor(TouchSensor, {
+			activationConstraint: { delay: 150, tolerance: 5 },
+		}),
+	);
+
+	const handleDragEnd = (event: DragEndEvent) => {
+		if (!onStateChange) return;
+		const targetCategory = event.over?.data.current?.category as
+			| Issue["state"]
+			| undefined;
+		const issue = event.active.data.current?.issue as Issue | undefined;
+		if (!issue || !targetCategory || issue.state === targetCategory) return;
+		onStateChange(issue, targetCategory);
+	};
+
 	return (
-		<div className="flex flex-1 gap-4 p-4 overflow-x-auto">
-			{byState.map((col) => (
-				<IssueColumn
-					key={col.state}
-					label={col.label}
-					state={col.state}
-					items={col.items}
-				/>
-			))}
-		</div>
+		<DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+			<div className="flex gap-3 overflow-x-auto items-start">
+				{columns.map((col) => (
+					<IssueColumn
+						key={col.state.id}
+						label={col.state.name}
+						state={col.state.category}
+						items={col.items}
+						onIssueClick={onIssueClick}
+						activeIssueId={activeIssueId}
+						droppableId={`${boardId}:${col.state.id}`}
+						projectId={projectId}
+					/>
+				))}
+			</div>
+		</DndContext>
 	);
 }

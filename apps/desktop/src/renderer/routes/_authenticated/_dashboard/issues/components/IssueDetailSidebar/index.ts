@@ -1,0 +1,1 @@
+export { IssueDetailSidebar } from "./IssueDetailSidebar";
