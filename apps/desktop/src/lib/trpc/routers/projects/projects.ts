@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { access, mkdir, rm } from "node:fs/promises";
 import { basename, join } from "node:path";
+import { gitProviderRegistry } from "@superset/git-provider-core";
 import {
 	BRANCH_PREFIX_MODES,
 	EXTERNAL_APPS,
@@ -421,49 +422,37 @@ export const createProjectsRouter = (getWindow: () => BrowserWindow | null) => {
 					.get();
 				if (!project) return [];
 
+				let remoteUrl: string;
 				try {
 					const { stdout } = await execWithShellEnv(
-						"gh",
-						[
-							"issue",
-							"list",
-							"--state",
-							"open",
-							"--limit",
-							"30",
-							"--json",
-							"number,title,url,state,labels",
-						],
-						{ cwd: project.mainRepoPath, timeout: 10000 },
+						"git",
+						["remote", "get-url", "origin"],
+						{ cwd: project.mainRepoPath, timeout: 5000 },
 					);
-					const raw: unknown = JSON.parse(stdout.trim() || "[]");
+					remoteUrl = stdout.trim();
+				} catch (err) {
+					console.warn("[projects.listIssues] Failed to read git remote:", err);
+					return [];
+				}
 
-					// Runtime validation with zod schema
-					const IssueListItemSchema = z.object({
-						number: z.number(),
-						title: z.string(),
-						url: z.string(),
-						state: z.string(),
-						labels: z.array(z.unknown()).optional(),
+				if (!remoteUrl) return [];
+
+				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
+				if (!provider) return [];
+
+				try {
+					const issues = await provider.listIssues({
+						remoteUrl,
+						state: "open",
 					});
-
-					const issuesArray = z.array(IssueListItemSchema).safeParse(raw);
-					if (!issuesArray.success) {
-						console.warn(
-							"[listIssues] Invalid response format:",
-							issuesArray.error,
-						);
-						return [];
-					}
-
-					return issuesArray.data.map((issue) => ({
+					return issues.slice(0, 30).map((issue) => ({
 						issueNumber: issue.number,
 						title: issue.title,
 						url: issue.url,
-						state: issue.state === "OPEN" ? "open" : issue.state.toLowerCase(),
+						state: issue.state,
 					}));
 				} catch (err) {
-					console.warn("[listIssues] Failed to list issues:", err);
+					console.warn("[projects.listIssues] Failed to list issues:", err);
 					return [];
 				}
 			}),
