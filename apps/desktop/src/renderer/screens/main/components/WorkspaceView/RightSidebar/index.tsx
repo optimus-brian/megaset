@@ -9,6 +9,8 @@ import {
 	LuShrink,
 	LuX,
 } from "react-icons/lu";
+import { VscIssues } from "react-icons/vsc";
+import { useLinkedIssue } from "renderer/hooks/useLinkedIssue";
 import { HotkeyLabel } from "renderer/hotkeys";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import {
@@ -23,6 +25,7 @@ import { useScrollContext } from "../ChangesContent";
 import { ChangesView } from "./ChangesView";
 import { FilesView } from "./FilesView";
 import { getSidebarHeaderTabButtonClassName } from "./headerTabStyles";
+import { LinkedIssueView } from "./LinkedIssueView";
 
 function TabButton({
 	isActive,
@@ -87,6 +90,8 @@ export function RightSidebar() {
 	const isExpanded = currentMode === SidebarMode.Changes;
 	const compactTabs = sidebarWidth < 250;
 	const showChangesTab = !!worktreePath;
+	const { issue: linkedIssue } = useLinkedIssue(workspaceId);
+	const showIssueTab = !!linkedIssue;
 
 	const handleExpandToggle = () => {
 		setMode(isExpanded ? SidebarMode.Tabs : SidebarMode.Changes);
@@ -177,6 +182,15 @@ export function RightSidebar() {
 						label="Files"
 						compact={compactTabs}
 					/>
+					{showIssueTab && (
+						<TabButton
+							isActive={rightSidebarTab === RightSidebarTab.Issue}
+							onClick={() => setRightSidebarTab(RightSidebarTab.Issue)}
+							icon={<VscIssues className="size-3.5" />}
+							label="Issue"
+							compact={compactTabs}
+						/>
+					)}
 				</div>
 				<div className="flex-1" />
 				<div className="flex items-center h-10 pr-2 gap-0.5">
@@ -236,13 +250,24 @@ export function RightSidebar() {
 			)}
 			<div
 				className={
-					rightSidebarTab === RightSidebarTab.Changes && showChangesTab
-						? "hidden"
-						: "flex-1 min-h-0 flex flex-col overflow-hidden"
+					rightSidebarTab === RightSidebarTab.Files
+						? "flex-1 min-h-0 flex flex-col overflow-hidden"
+						: "hidden"
 				}
 			>
 				<FilesView />
 			</div>
+			{showIssueTab && workspaceId && (
+				<div
+					className={
+						rightSidebarTab === RightSidebarTab.Issue
+							? "flex-1 min-h-0 flex flex-col overflow-hidden"
+							: "hidden"
+					}
+				>
+					<LinkedIssueView workspaceId={workspaceId} />
+				</div>
+			)}
 		</aside>
 	);
 }
