@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { app, safeStorage } from "electron";
 
@@ -22,17 +28,20 @@ export async function saveToken(
 }
 
 export async function loadToken(provider: string): Promise<string | null> {
+	const file = join(getTokenDir(), `${provider}.enc`);
+	if (!existsSync(file)) return null;
 	try {
-		const file = join(getTokenDir(), `${provider}.enc`);
-		if (!existsSync(file)) return null;
-		const buf = readFileSync(file);
-		return safeStorage.decryptString(buf);
-	} catch {
+		return safeStorage.decryptString(readFileSync(file));
+	} catch (err) {
+		console.error(
+			`[git-provider-core] failed to decrypt token for provider "${provider}":`,
+			err,
+		);
 		return null;
 	}
 }
 
 export async function clearToken(provider: string): Promise<void> {
 	const file = join(getTokenDir(), `${provider}.enc`);
-	if (existsSync(file)) writeFileSync(file, "");
+	rmSync(file, { force: true });
 }

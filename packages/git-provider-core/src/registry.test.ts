@@ -1,8 +1,10 @@
-import { expect, test } from "bun:test";
+import { beforeEach, expect, test } from "bun:test";
 import { gitProviderRegistry } from "./registry";
 import type { Issue, IssueProvider } from "./types";
 
-test("registry stores and retrieves providers", () => {
+beforeEach(() => gitProviderRegistry.clear());
+
+test("registry stores, retrieves, detects, and lists providers", () => {
 	const fake: IssueProvider = {
 		name: "github",
 		canHandle: (url) => url.includes("github"),
@@ -15,4 +17,5 @@ test("registry stores and retrieves providers", () => {
 	expect(
 		gitProviderRegistry.detectFromRemoteUrl("https://github.com/a/b"),
 	).toBe(fake);
+	expect(gitProviderRegistry.listConfigured()).toContain("github");
 });

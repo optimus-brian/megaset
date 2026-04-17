@@ -21,6 +21,15 @@ class GitProviderRegistry {
 	listConfigured(): ProviderName[] {
 		return Array.from(this.issueProviders.keys());
 	}
+
+	/** Reset state. Intended for test setup; not for production use. */
+	clear() {
+		this.issueProviders.clear();
+	}
 }
 
+/**
+ * Module-level singleton. Tests that register fakes should call
+ * `gitProviderRegistry.clear()` in `beforeEach` to avoid cross-file state leakage.
+ */
 export const gitProviderRegistry = new GitProviderRegistry();
