@@ -22,6 +22,7 @@ import {
 	SETTING_ITEM_ID,
 	type SettingItemId,
 } from "../../../utils/settings-search";
+import { GitProvidersSection } from "../GitProvidersSection";
 
 interface GitSettingsProps {
 	visibleItems?: SettingItemId[] | null;
@@ -246,6 +247,8 @@ export function GitSettings({ visibleItems }: GitSettingsProps) {
 						/>
 					</div>
 				)}
+
+				<GitProvidersSection />
 			</div>
 		</div>
 	);
