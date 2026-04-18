@@ -5,6 +5,7 @@ import {
 	ProviderNameSchema,
 	saveToken,
 } from "@superset/git-provider-core";
+import { primeOnedevHost } from "@superset/git-provider-onedev";
 import { projects } from "@superset/local-db";
 import { eq } from "drizzle-orm";
 import { localDb } from "main/lib/local-db";
@@ -106,6 +107,9 @@ export const createGitProvidersRouter = () => {
 			)
 			.mutation(async ({ input }) => {
 				await saveToken(input.provider, input.token);
+				if (input.provider === "onedev") {
+					await primeOnedevHost();
+				}
 				return { success: true };
 			}),
 
@@ -113,6 +117,9 @@ export const createGitProvidersRouter = () => {
 			.input(z.object({ provider: ProviderNameSchema }))
 			.mutation(async ({ input }) => {
 				await clearToken(input.provider);
+				if (input.provider === "onedev") {
+					await primeOnedevHost();
+				}
 				return { success: true };
 			}),
 
