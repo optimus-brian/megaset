@@ -9,6 +9,8 @@ interface ProjectIssuesSectionProps {
 	projectName: string;
 	onIssueClick: (issue: Issue, projectId: string) => void;
 	activeIssueId?: string;
+	/** Optional filter that hides columns outside the selected category. */
+	categoryFilter?: Issue["state"];
 }
 
 export function ProjectIssuesSection({
@@ -16,6 +18,7 @@ export function ProjectIssuesSection({
 	projectName,
 	onIssueClick,
 	activeIssueId,
+	categoryFilter,
 }: ProjectIssuesSectionProps) {
 	const utils = electronTrpc.useUtils();
 	const { data, isLoading } =
@@ -83,6 +86,7 @@ export function ProjectIssuesSection({
 						activeIssueId={activeIssueId}
 						onStateChange={handleStateChange}
 						states={statesQuery.data?.states}
+						categoryFilter={categoryFilter}
 					/>
 				</div>
 			)}

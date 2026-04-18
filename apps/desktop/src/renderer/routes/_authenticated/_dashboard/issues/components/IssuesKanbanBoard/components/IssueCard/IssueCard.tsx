@@ -77,9 +77,7 @@ export function IssueCard({
 
 	const classes = cn(
 		"block text-left w-full p-3 bg-background border rounded-md transition-colors cursor-grab active:cursor-grabbing",
-		isActive
-			? "border-primary"
-			: "border-border hover:border-muted-foreground",
+		isActive ? "border-primary" : "border-border hover:border-muted-foreground",
 		isDragging && "opacity-50",
 	);
 

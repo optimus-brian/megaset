@@ -23,6 +23,8 @@ interface IssuesKanbanBoardProps {
 	boardId: string;
 	projectId?: string;
 	states?: IssueState[];
+	/** Optional filter: only columns whose category matches are rendered. */
+	categoryFilter?: Issue["state"];
 }
 
 export function IssuesKanbanBoard({
@@ -33,10 +35,14 @@ export function IssuesKanbanBoard({
 	boardId,
 	projectId,
 	states,
+	categoryFilter,
 }: IssuesKanbanBoardProps) {
 	// Top-level only: sub-issues are rendered nested under their parent card.
 	const topLevel = issues.filter((i) => i.parentIssueNumber == null);
-	const effectiveStates = states && states.length > 0 ? states : DEFAULT_STATES;
+	const baseStates = states && states.length > 0 ? states : DEFAULT_STATES;
+	const effectiveStates = categoryFilter
+		? baseStates.filter((s) => s.category === categoryFilter)
+		: baseStates;
 	const columns = effectiveStates.map((s) => ({
 		state: s,
 		items: topLevel.filter((i) =>
