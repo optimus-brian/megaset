@@ -4,12 +4,10 @@ import { Tabs, TabsList, TabsTrigger } from "@superset/ui/tabs";
 import { cn } from "@superset/ui/utils";
 import { useRef, useState } from "react";
 import {
-	HiOutlineArchiveBox,
 	HiOutlineMagnifyingGlass,
 	HiOutlinePencilSquare,
 	HiOutlineQueueList,
 	HiOutlineViewColumns,
-	HiPlus,
 	HiXMark,
 } from "react-icons/hi2";
 import { useHotkey } from "renderer/hotkeys";
@@ -22,7 +20,7 @@ import { AssigneeFilter } from "./components/AssigneeFilter";
 import { CreateTaskDialog } from "./components/CreateTaskDialog";
 import { RunInWorkspacePopover } from "./components/RunInWorkspacePopover";
 
-export type TabValue = "all" | "active" | "backlog" | "closed";
+export type TabValue = "all" | "active" | "backlog";
 
 interface TasksTopBarProps {
 	currentTab: TabValue;
@@ -35,8 +33,6 @@ interface TasksTopBarProps {
 	onClearSelection?: () => void;
 	viewMode: ViewMode;
 	onViewModeChange: (mode: ViewMode) => void;
-	onNewTask?: () => void;
-	onNewProject?: () => void;
 }
 
 const TABS = [
@@ -55,11 +51,6 @@ const TABS = [
 		label: "Backlog",
 		Icon: BacklogIcon,
 	},
-	{
-		value: "closed" as const,
-		label: "Closed",
-		Icon: HiOutlineArchiveBox,
-	},
 ] as const;
 
 export function TasksTopBar({
@@ -73,8 +64,6 @@ export function TasksTopBar({
 	onClearSelection,
 	viewMode,
 	onViewModeChange,
-	onNewTask,
-	onNewProject,
 }: TasksTopBarProps) {
 	const selectedCount = selectedTasks.length;
 	const searchInputRef = useRef<HTMLInputElement>(null);
@@ -154,24 +143,11 @@ export function TasksTopBar({
 						variant="outline"
 						size="sm"
 						className="h-8 gap-1.5 px-3"
-						onClick={() =>
-							onNewTask ? onNewTask() : setIsCreateTaskOpen(true)
-						}
+						onClick={() => setIsCreateTaskOpen(true)}
 					>
 						<HiOutlinePencilSquare className="size-4" />
 						<span>New task</span>
 					</Button>
-					{onNewProject && (
-						<Button
-							variant="outline"
-							size="sm"
-							className="h-8 gap-1.5 px-3"
-							onClick={onNewProject}
-						>
-							<HiPlus className="size-4" />
-							<span>New project</span>
-						</Button>
-					)}
 
 					<div className="flex items-center rounded-md border bg-muted/30 p-0.5">
 						<button

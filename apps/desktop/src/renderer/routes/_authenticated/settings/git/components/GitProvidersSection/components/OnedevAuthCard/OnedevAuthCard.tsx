@@ -99,9 +99,8 @@ export function OnedevAuthCard() {
 						onChange={(e) => setPat(e.target.value)}
 					/>
 					<p className="text-xs text-muted-foreground">
-						Generate a token in your OneDev profile under{" "}
-						<em>Access Tokens</em>. URL + token are stored encrypted in your
-						macOS Keychain.
+						Generate a token in your OneDev profile under <em>Access Tokens</em>
+						. URL + token are stored encrypted in your macOS Keychain.
 					</p>
 					<Button
 						size="sm"

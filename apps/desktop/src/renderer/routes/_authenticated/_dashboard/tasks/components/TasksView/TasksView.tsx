@@ -2,22 +2,16 @@ import { Spinner } from "@superset/ui/spinner";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import { useTasksFilterStore } from "../../stores/tasks-filter-state";
 import { BoardContent } from "./components/BoardContent";
 import { LinearCTA } from "./components/LinearCTA";
-import {
-	CreateOnedevIssueDialog,
-	CreateOnedevProjectDialog,
-	OnedevTasksContent,
-} from "./components/OnedevTasksContent";
 import { TableContent } from "./components/TableContent";
 import { type TabValue, TasksTopBar } from "./components/TasksTopBar";
 import type { TaskWithStatus } from "./hooks/useTasksData";
 
 interface TasksViewProps {
-	initialTab?: TabValue;
+	initialTab?: "all" | "active" | "backlog";
 	initialAssignee?: string;
 	initialSearch?: string;
 }
@@ -97,10 +91,6 @@ export function TasksView({
 	const isLinearConnected =
 		integrations?.some((i) => i.provider === "linear") ?? false;
 
-	const { data: onedevConfig } =
-		electronTrpc.settings.getOnedevConfig.useQuery();
-	const isOnedevConfigured = !!onedevConfig?.url && !!onedevConfig?.accessToken;
-
 	const handleTabChange = (tab: TabValue) => {
 		const search: Record<string, string> = {};
 		if (tab !== "all") search.tab = tab;
@@ -145,49 +135,6 @@ export function TasksView({
 	};
 
 	const showLinearCTA = !isCheckingLinear && !isLinearConnected;
-
-	const { data: onedevProjectPaths } =
-		electronTrpc.workspaces.getOnedevProjectPaths.useQuery(undefined, {
-			enabled: isOnedevConfigured,
-		});
-	const [isCreateOnedevOpen, setIsCreateOnedevOpen] = useState(false);
-	const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
-
-	// OneDev takes priority over Linear when configured
-	if (isOnedevConfigured) {
-		return (
-			<div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
-				<TasksTopBar
-					currentTab={currentTab}
-					onTabChange={handleTabChange}
-					searchQuery={searchQuery}
-					onSearchChange={handleSearchChange}
-					assigneeFilter={assigneeFilter}
-					onAssigneeFilterChange={handleAssigneeFilterChange}
-					selectedTasks={selectedTasks}
-					onClearSelection={handleClearSelection}
-					viewMode={viewMode}
-					onViewModeChange={setViewMode}
-					onNewTask={() => setIsCreateOnedevOpen(true)}
-					onNewProject={() => setIsCreateProjectOpen(true)}
-				/>
-				<OnedevTasksContent
-					searchQuery={searchQuery}
-					viewMode={viewMode}
-					stateFilter={currentTab}
-				/>
-				<CreateOnedevIssueDialog
-					open={isCreateOnedevOpen}
-					onOpenChange={setIsCreateOnedevOpen}
-					projectPaths={onedevProjectPaths ?? []}
-				/>
-				<CreateOnedevProjectDialog
-					open={isCreateProjectOpen}
-					onOpenChange={setIsCreateProjectOpen}
-				/>
-			</div>
-		);
-	}
 
 	return (
 		<div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
