@@ -1,4 +1,4 @@
-import type { Issue } from "@superset/git-provider-core";
+import type { Issue, IssueState } from "@superset/git-provider-core";
 import { Button } from "@superset/ui/button";
 import {
 	Collapsible,
@@ -15,8 +15,8 @@ import { VscChevronRight, VscIssues } from "react-icons/vsc";
 import { useLinkedIssue } from "renderer/hooks/useLinkedIssue";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 
-function stateColor(state: Issue["state"]): string {
-	switch (state) {
+function categoryIconColor(category: Issue["state"]): string {
+	switch (category) {
 		case "open":
 			return "text-green-500";
 		case "in_progress":
@@ -26,10 +26,10 @@ function stateColor(state: Issue["state"]): string {
 	}
 }
 
-const STATE_OPTIONS: { value: Issue["state"]; label: string }[] = [
-	{ value: "open", label: "Open" },
-	{ value: "in_progress", label: "In Progress" },
-	{ value: "closed", label: "Closed" },
+const FALLBACK_STATES: IssueState[] = [
+	{ id: "open", name: "Open", category: "open" },
+	{ id: "in_progress", name: "In Progress", category: "in_progress" },
+	{ id: "closed", name: "Closed", category: "closed" },
 ];
 
 interface LinkedIssueViewProps {
@@ -81,6 +81,10 @@ function LinkedIssueContent({
 			{ projectId, number: issueNumber },
 			{ refetchInterval: 30_000 },
 		);
+	const statesQuery =
+		electronTrpc.gitProviders.listIssueStatesForProject.useQuery({
+			projectId,
+		});
 
 	const [draft, setDraft] = useState("");
 	const [descOpen, setDescOpen] = useState(false);
@@ -110,6 +114,15 @@ function LinkedIssueContent({
 	const issue = issueQuery.data?.issue;
 	const provider = issueQuery.data?.provider;
 	const comments = commentsQuery.data?.comments ?? [];
+	const availableStates: IssueState[] =
+		statesQuery.data?.states && statesQuery.data.states.length > 0
+			? statesQuery.data.states
+			: FALLBACK_STATES;
+	const selectedStateValue =
+		issue?.stateId ??
+		availableStates.find((s) => s.category === issue?.state)?.id ??
+		availableStates[0]?.id ??
+		"";
 
 	const handleSubmit = () => {
 		const body = draft.trim();
@@ -144,7 +157,7 @@ function LinkedIssueContent({
 			<div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
 				<div className="flex items-center gap-2 min-w-0">
 					<VscIssues
-						className={`size-3.5 shrink-0 ${stateColor(issue.state)}`}
+						className={`size-3.5 shrink-0 ${categoryIconColor(issue.state)}`}
 					/>
 					<span className="text-xs font-mono text-muted-foreground truncate">
 						#{issue.number}
@@ -187,20 +200,24 @@ function LinkedIssueContent({
 					<div className="flex items-center justify-between">
 						<span className="text-xs text-muted-foreground">State</span>
 						<select
-							value={issue.state}
-							onChange={(e) =>
+							value={selectedStateValue}
+							onChange={(e) => {
+								const chosen = availableStates.find(
+									(s) => s.id === e.target.value,
+								);
+								if (!chosen) return;
 								setState.mutate({
 									projectId,
 									number: issueNumber,
-									targetState: e.target.value as Issue["state"],
-								})
-							}
-							disabled={setState.isPending}
+									targetState: chosen.category,
+								});
+							}}
+							disabled={setState.isPending || statesQuery.isLoading}
 							className="h-6 text-xs rounded border border-border bg-transparent px-1 w-28 disabled:opacity-50"
 						>
-							{STATE_OPTIONS.map((opt) => (
-								<option key={opt.value} value={opt.value}>
-									{opt.label}
+							{availableStates.map((opt) => (
+								<option key={opt.id} value={opt.id}>
+									{opt.name}
 								</option>
 							))}
 						</select>
