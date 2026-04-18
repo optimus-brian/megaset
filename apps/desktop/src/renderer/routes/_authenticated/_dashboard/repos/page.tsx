@@ -19,10 +19,7 @@ type VisibilityFilter = "all" | "public" | "private";
 
 type ProviderName = "github" | "onedev" | "forgejo";
 
-const PROVIDER_META: Record<
-	ProviderName,
-	{ label: string; icon: IconType }
-> = {
+const PROVIDER_META: Record<ProviderName, { label: string; icon: IconType }> = {
 	github: { label: "GitHub", icon: FaGithub },
 	onedev: { label: "OneDev", icon: VscServer },
 	forgejo: { label: "Forgejo", icon: VscServer },
@@ -106,10 +103,7 @@ function ReposPage() {
 		});
 	}, [allRepos, search, clonedRepoNames]);
 
-	const totalMatched = groupedRepos.reduce(
-		(sum, g) => sum + g.totalMatched,
-		0,
-	);
+	const totalMatched = groupedRepos.reduce((sum, g) => sum + g.totalMatched, 0);
 
 	if (isAnyConfigLoading) {
 		return (
@@ -136,9 +130,7 @@ function ReposPage() {
 					/>
 					<select
 						value={visibility}
-						onChange={(e) =>
-							setVisibility(e.target.value as VisibilityFilter)
-						}
+						onChange={(e) => setVisibility(e.target.value as VisibilityFilter)}
 						className="text-sm bg-background border border-border rounded px-2 py-1 h-8"
 					>
 						<option value="all">All</option>
@@ -245,13 +237,13 @@ function ProviderSection({
 			) : (
 				<div className="flex flex-col gap-5">
 					{availableRepos.length > 0 && (
-						<div className="flex flex-col gap-2">
+						<div className="flex flex-col gap-1">
 							<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
 								Available ({availableRepos.length})
 							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 auto-rows-min">
+							<div className="flex flex-col rounded-md border border-border divide-y divide-border">
 								{availableRepos.map((repo) => (
-									<RepoCard
+									<RepoRow
 										key={repo.id}
 										repo={repo}
 										cloned={false}
@@ -265,13 +257,13 @@ function ProviderSection({
 					)}
 
 					{clonedRepos.length > 0 && (
-						<div className="flex flex-col gap-2">
+						<div className="flex flex-col gap-1">
 							<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
 								Already cloned ({clonedRepos.length})
 							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 auto-rows-min">
+							<div className="flex flex-col rounded-md border border-border divide-y divide-border">
 								{clonedRepos.map((repo) => (
-									<RepoCard
+									<RepoRow
 										key={repo.id}
 										repo={repo}
 										cloned={true}
@@ -289,7 +281,7 @@ function ProviderSection({
 	);
 }
 
-function RepoCard({
+function RepoRow({
 	repo,
 	cloned,
 	isCloning,
@@ -304,53 +296,50 @@ function RepoCard({
 }) {
 	return (
 		<div
-			className={`rounded-md border border-border p-3 flex flex-col gap-2 bg-background transition-colors ${
-				cloned
-					? "opacity-50 hover:opacity-75"
-					: "hover:border-muted-foreground"
+			className={`flex items-center gap-3 px-3 py-2 hover:bg-muted/30 transition-colors ${
+				cloned ? "opacity-50" : ""
 			}`}
 		>
-			<div className="flex items-start justify-between gap-2">
+			<div className="flex-1 min-w-0 flex items-center gap-3">
 				<a
 					href={repo.htmlUrl}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-sm font-medium hover:underline truncate"
+					className="text-sm font-medium hover:underline truncate shrink-0"
 				>
 					{repo.fullName}
 				</a>
-				<div className="flex items-center gap-1 text-muted-foreground shrink-0">
-					{repo.isPrivate && (
-						<HiOutlineLockClosed className="size-3" aria-label="Private" />
-					)}
-					<HiOutlineStar className="size-3" />
-					<span className="text-[10px]">{repo.stars}</span>
-				</div>
+				{repo.description && (
+					<p className="text-xs text-muted-foreground truncate">
+						{repo.description}
+					</p>
+				)}
 			</div>
 
-			{repo.description && (
-				<p className="text-xs text-muted-foreground line-clamp-2">
-					{repo.description}
-				</p>
-			)}
-
-			<div className="flex flex-wrap gap-1">
+			<div className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
+				{repo.isPrivate && (
+					<HiOutlineLockClosed className="size-3" aria-label="Private" />
+				)}
 				{repo.isFork && (
-					<span className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded">
-						fork
-					</span>
+					<span className="text-[10px] px-1 py-0.5 bg-muted rounded">fork</span>
 				)}
 				{repo.isArchived && (
-					<span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-500 rounded">
+					<span className="text-[10px] px-1 py-0.5 bg-amber-500/20 text-amber-500 rounded">
 						archived
 					</span>
 				)}
-				<span className="text-[10px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded">
+				<span className="text-[10px] px-1 py-0.5 bg-muted rounded">
 					{repo.defaultBranch}
 				</span>
+				{repo.stars > 0 && (
+					<span className="flex items-center gap-0.5 text-[10px]">
+						<HiOutlineStar className="size-3" />
+						{repo.stars}
+					</span>
+				)}
 			</div>
 
-			<div className="flex items-center justify-end gap-2 mt-auto">
+			<div className="shrink-0 w-[130px] text-right">
 				{cloned ? (
 					<span className="text-[11px] text-muted-foreground italic">
 						Already cloned
@@ -361,6 +350,7 @@ function RepoCard({
 						variant="outline"
 						disabled={cloneDisabled}
 						onClick={onClone}
+						className="h-7 text-xs"
 					>
 						{isCloning ? "Cloning…" : "Clone as Project"}
 					</Button>
