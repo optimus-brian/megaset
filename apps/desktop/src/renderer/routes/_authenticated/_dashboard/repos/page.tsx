@@ -4,8 +4,10 @@ import { Spinner } from "@superset/ui/spinner";
 import { toast } from "@superset/ui/sonner";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import type { IconType } from "react-icons";
 import { FaGithub } from "react-icons/fa";
 import { HiOutlineLockClosed, HiOutlineStar } from "react-icons/hi2";
+import { VscServer } from "react-icons/vsc";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { ProviderSetupCTA } from "../components/ProviderSetupCTA";
 
@@ -15,21 +17,37 @@ export const Route = createFileRoute("/_authenticated/_dashboard/repos/")({
 
 type VisibilityFilter = "all" | "public" | "private";
 
+type ProviderName = "github" | "onedev" | "forgejo";
+
+const PROVIDER_META: Record<
+	ProviderName,
+	{ label: string; icon: IconType }
+> = {
+	github: { label: "GitHub", icon: FaGithub },
+	onedev: { label: "OneDev", icon: VscServer },
+	forgejo: { label: "Forgejo", icon: VscServer },
+};
+
 function ReposPage() {
 	const [visibility, setVisibility] = useState<VisibilityFilter>("all");
 	const [search, setSearch] = useState("");
 	const utils = electronTrpc.useUtils();
 
-	const { data: ghConfigured, isLoading: isGhLoading } =
+	const { data: ghConfigured, isLoading: isGhConfigLoading } =
 		electronTrpc.gitProviders.isConfigured.useQuery({ provider: "github" });
+	const { data: onedevConfigured, isLoading: isOnedevConfigLoading } =
+		electronTrpc.gitProviders.isConfigured.useQuery({ provider: "onedev" });
+
+	const anyConfigured = ghConfigured === true || onedevConfigured === true;
+	const isAnyConfigLoading = isGhConfigLoading || isOnedevConfigLoading;
 
 	const {
-		data: repos,
+		data: allRepos,
 		isLoading: isReposLoading,
 		error: reposError,
-	} = electronTrpc.gitProviders.listRepositories.useQuery(
-		{ provider: "github", visibility },
-		{ enabled: ghConfigured === true },
+	} = electronTrpc.gitProviders.listAllRepositories.useQuery(
+		{ visibility },
+		{ enabled: anyConfigured },
 	);
 
 	const { data: existingProjects } =
@@ -58,28 +76,42 @@ function ReposPage() {
 		onError: (err) => toast.error(`Clone failed: ${err.message}`),
 	});
 
-	const { availableRepos, clonedRepos } = useMemo(() => {
+	const groupedRepos = useMemo(() => {
 		const q = search.trim().toLowerCase();
-		const filtered = (repos ?? []).filter((r) => {
-			if (!q) return true;
-			return (
-				r.fullName.toLowerCase().includes(q) ||
-				(r.description?.toLowerCase().includes(q) ?? false)
-			);
-		});
-		const cloned: typeof filtered = [];
-		const available: typeof filtered = [];
-		for (const r of filtered) {
-			if (clonedRepoNames.has(r.name.toLowerCase())) {
-				cloned.push(r);
-			} else {
-				available.push(r);
+		const groups = allRepos?.groups ?? [];
+		return groups.map((group) => {
+			const filtered = group.repositories.filter((r) => {
+				if (!q) return true;
+				return (
+					r.fullName.toLowerCase().includes(q) ||
+					(r.description?.toLowerCase().includes(q) ?? false)
+				);
+			});
+			const cloned: typeof filtered = [];
+			const available: typeof filtered = [];
+			for (const r of filtered) {
+				if (clonedRepoNames.has(r.name.toLowerCase())) {
+					cloned.push(r);
+				} else {
+					available.push(r);
+				}
 			}
-		}
-		return { availableRepos: available, clonedRepos: cloned };
-	}, [repos, search, clonedRepoNames]);
+			return {
+				provider: group.provider as ProviderName,
+				error: group.error,
+				availableRepos: available,
+				clonedRepos: cloned,
+				totalMatched: filtered.length,
+			};
+		});
+	}, [allRepos, search, clonedRepoNames]);
 
-	if (isGhLoading) {
+	const totalMatched = groupedRepos.reduce(
+		(sum, g) => sum + g.totalMatched,
+		0,
+	);
+
+	if (isAnyConfigLoading) {
 		return (
 			<div className="flex-1 flex items-center justify-center">
 				<Spinner className="size-5" />
@@ -87,15 +119,14 @@ function ReposPage() {
 		);
 	}
 
-	if (!ghConfigured) {
+	if (!anyConfigured) {
 		return <ProviderSetupCTA provider="github" />;
 	}
 
 	return (
 		<div className="flex-1 flex flex-col min-h-0 overflow-hidden">
 			<div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-				<FaGithub className="size-4 text-muted-foreground" />
-				<span className="text-sm font-medium">GitHub Repositories</span>
+				<span className="text-sm font-medium">Repositories</span>
 				<div className="ml-auto flex items-center gap-2">
 					<Input
 						placeholder="Filter by name or description…"
@@ -127,58 +158,30 @@ function ReposPage() {
 						Failed to load repositories: {reposError.message}
 					</p>
 				</div>
-			) : availableRepos.length === 0 && clonedRepos.length === 0 ? (
+			) : totalMatched === 0 && groupedRepos.every((g) => !g.error) ? (
 				<div className="flex-1 flex items-center justify-center p-6">
 					<p className="text-sm text-muted-foreground text-center">
 						{search
 							? "No repositories match your filter."
-							: "No repositories found for this account."}
+							: "No repositories found for your configured providers."}
 					</p>
 				</div>
 			) : (
-				<div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
-					{availableRepos.length > 0 && (
-						<section className="flex flex-col gap-2">
-							<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
-								Available ({availableRepos.length})
-							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 auto-rows-min">
-								{availableRepos.map((repo) => (
-									<RepoCard
-										key={repo.id}
-										repo={repo}
-										cloned={false}
-										isCloning={
-											cloneRepo.isPending &&
-											cloneRepo.variables?.url === repo.cloneUrl
-										}
-										onClone={() => cloneRepo.mutate({ url: repo.cloneUrl })}
-										cloneDisabled={cloneRepo.isPending}
-									/>
-								))}
-							</div>
-						</section>
-					)}
-
-					{clonedRepos.length > 0 && (
-						<section className="flex flex-col gap-2">
-							<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
-								Already cloned ({clonedRepos.length})
-							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 auto-rows-min">
-								{clonedRepos.map((repo) => (
-									<RepoCard
-										key={repo.id}
-										repo={repo}
-										cloned={true}
-										isCloning={false}
-										onClone={() => {}}
-										cloneDisabled={true}
-									/>
-								))}
-							</div>
-						</section>
-					)}
+				<div className="flex-1 overflow-y-auto p-4 flex flex-col gap-8">
+					{groupedRepos.map((group) => (
+						<ProviderSection
+							key={group.provider}
+							provider={group.provider}
+							error={group.error}
+							availableRepos={group.availableRepos}
+							clonedRepos={group.clonedRepos}
+							onClone={(url) => cloneRepo.mutate({ url })}
+							cloningUrl={
+								cloneRepo.isPending ? cloneRepo.variables?.url : undefined
+							}
+							cloneDisabled={cloneRepo.isPending}
+						/>
+					))}
 				</div>
 			)}
 		</div>
@@ -197,6 +200,94 @@ type RepoCardRepo = {
 	defaultBranch: string;
 	stars: number;
 };
+
+function ProviderSection({
+	provider,
+	error,
+	availableRepos,
+	clonedRepos,
+	onClone,
+	cloningUrl,
+	cloneDisabled,
+}: {
+	provider: ProviderName;
+	error: string | null;
+	availableRepos: RepoCardRepo[];
+	clonedRepos: RepoCardRepo[];
+	onClone: (url: string) => void;
+	cloningUrl: string | undefined;
+	cloneDisabled: boolean;
+}) {
+	const meta = PROVIDER_META[provider] ?? {
+		label: provider,
+		icon: VscServer,
+	};
+	const Icon = meta.icon;
+
+	const isEmpty =
+		!error && availableRepos.length === 0 && clonedRepos.length === 0;
+
+	return (
+		<section className="flex flex-col gap-3">
+			<div className="flex items-center gap-2 px-1">
+				<Icon className="size-4 text-muted-foreground" />
+				<h2 className="text-sm font-semibold">{meta.label}</h2>
+			</div>
+
+			{error ? (
+				<p className="text-xs text-destructive px-1">
+					Failed to load {meta.label} repositories: {error}
+				</p>
+			) : isEmpty ? (
+				<p className="text-xs text-muted-foreground px-1">
+					No repositories found.
+				</p>
+			) : (
+				<div className="flex flex-col gap-5">
+					{availableRepos.length > 0 && (
+						<div className="flex flex-col gap-2">
+							<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
+								Available ({availableRepos.length})
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 auto-rows-min">
+								{availableRepos.map((repo) => (
+									<RepoCard
+										key={repo.id}
+										repo={repo}
+										cloned={false}
+										isCloning={cloningUrl === repo.cloneUrl}
+										onClone={() => onClone(repo.cloneUrl)}
+										cloneDisabled={cloneDisabled}
+									/>
+								))}
+							</div>
+						</div>
+					)}
+
+					{clonedRepos.length > 0 && (
+						<div className="flex flex-col gap-2">
+							<h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
+								Already cloned ({clonedRepos.length})
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 auto-rows-min">
+								{clonedRepos.map((repo) => (
+									<RepoCard
+										key={repo.id}
+										repo={repo}
+										cloned={true}
+										isCloning={false}
+										onClone={() => {}}
+										cloneDisabled={true}
+									/>
+								))}
+							</div>
+						</div>
+					)}
+				</div>
+			)}
+		</section>
+	);
+}
 
 function RepoCard({
 	repo,

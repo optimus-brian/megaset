@@ -69,16 +69,40 @@ export const onedevProvider: IssueProvider = {
 		return issue;
 	},
 
-	async createIssue() {
-		throw new Error(
-			"OneDev createIssue not yet implemented in the new provider package",
-		);
+	async createIssue({ remoteUrl, title, body }) {
+		const projectPath = await projectFromRemote(remoteUrl);
+		const { client } = await getAuthedClient();
+		return client.createIssue(projectPath, title, body);
 	},
 
 	async listIssueComments({ remoteUrl, number }) {
 		const projectPath = await projectFromRemote(remoteUrl);
 		const { client } = await getAuthedClient();
 		return client.listIssueComments(projectPath, number);
+	},
+
+	async createIssueComment({ remoteUrl, number, body }) {
+		const projectPath = await projectFromRemote(remoteUrl);
+		const { client } = await getAuthedClient();
+		return client.createIssueComment(projectPath, number, body);
+	},
+
+	async setIssueState({ remoteUrl, number, state }) {
+		const projectPath = await projectFromRemote(remoteUrl);
+		const { client } = await getAuthedClient();
+		// Map the normalized open/closed category to OneDev's default state names.
+		// OneDev deployments can rename these, but "Open" / "Closed" are the
+		// defaults shipped with the product and match DEFAULT_STATES above.
+		const onedevState = state === "closed" ? "Closed" : "Open";
+		return client.setIssueStateByName(projectPath, number, onedevState);
+	},
+
+	async setIssueStateById({ remoteUrl, number, stateId }) {
+		const projectPath = await projectFromRemote(remoteUrl);
+		const { client } = await getAuthedClient();
+		// For OneDev, stateId IS the state name (e.g. "In Progress"), since
+		// listIssueStates() exposes the name as the id.
+		return client.setIssueStateByName(projectPath, number, stateId);
 	},
 
 	async listIssueStates() {

@@ -148,6 +148,56 @@ export const createGitProvidersRouter = () => {
 				return provider.listRepositories({ visibility: input.visibility });
 			}),
 
+		/**
+		 * Aggregate repositories from ALL configured providers. Each provider is
+		 * queried independently; errors for one provider don't affect the others.
+		 * Only providers whose token is actually configured are queried — this
+		 * avoids throwing "not configured" errors for providers the user hasn't
+		 * set up yet.
+		 */
+		listAllRepositories: publicProcedure
+			.input(
+				z
+					.object({
+						visibility: z.enum(["all", "public", "private"]).optional(),
+					})
+					.optional(),
+			)
+			.query(async ({ input }) => {
+				const registered = gitProviderRegistry.listConfigured();
+				const results = await Promise.all(
+					registered.map(async (name) => {
+						const tokenPresent = (await loadToken(name)) !== null;
+						if (!tokenPresent) {
+							return { provider: name, repositories: [], error: null };
+						}
+						const provider = gitProviderRegistry.getIssueProvider(name);
+						if (!provider?.listRepositories) {
+							return { provider: name, repositories: [], error: null };
+						}
+						try {
+							const repositories = await provider.listRepositories({
+								visibility: input?.visibility,
+							});
+							return { provider: name, repositories, error: null };
+						} catch (err) {
+							const message =
+								err instanceof Error ? err.message : String(err);
+							console.warn(
+								`[gitProviders/listAllRepositories] ${name} failed:`,
+								err,
+							);
+							return {
+								provider: name,
+								repositories: [],
+								error: message,
+							};
+						}
+					}),
+				);
+				return { groups: results };
+			}),
+
 		listSubIssuesForProject: publicProcedure
 			.input(
 				z.object({
@@ -348,6 +398,43 @@ export const createGitProvidersRouter = () => {
 				}
 				// Fallback: return current state via getIssue
 				return provider.getIssue({ remoteUrl, number: input.number });
+			}),
+
+		setIssueStateByIdForProject: publicProcedure
+			.input(
+				z.object({
+					projectId: z.string(),
+					number: z.number().int().positive(),
+					stateId: z.string().min(1),
+				}),
+			)
+			.mutation(async ({ input }) => {
+				const project = localDb
+					.select()
+					.from(projects)
+					.where(eq(projects.id, input.projectId))
+					.get();
+				if (!project) throw new Error("Project not found");
+
+				const { stdout } = await execWithShellEnv(
+					"git",
+					["remote", "get-url", "origin"],
+					{ cwd: project.mainRepoPath, timeout: 5000 },
+				);
+				const remoteUrl = stdout.trim();
+				if (!remoteUrl) throw new Error("No git remote configured");
+
+				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
+				if (!provider?.setIssueStateById) {
+					throw new Error(
+						"Provider does not support setting state by id",
+					);
+				}
+				return provider.setIssueStateById({
+					remoteUrl,
+					number: input.number,
+					stateId: input.stateId,
+				});
 			}),
 
 		addIssueLabelsForProject: publicProcedure

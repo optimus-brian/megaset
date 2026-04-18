@@ -91,6 +91,20 @@ export function createOnedevClient(creds: OnedevCredentials) {
 		return (await res.json()) as T;
 	}
 
+	async function apiPost<T>(path: string, body: unknown): Promise<T> {
+		const res = await fetch(`${baseUrl}${path}`, {
+			method: "POST",
+			headers,
+			body: JSON.stringify(body),
+		});
+		if (!res.ok) {
+			const text = await res.text().catch(() => "");
+			throw new Error(`OneDev ${res.status} ${path}: ${text.slice(0, 200)}`);
+		}
+		const raw = await res.text();
+		return raw ? (JSON.parse(raw) as T) : (undefined as unknown as T);
+	}
+
 	async function getProjectByPath(
 		projectPath: string,
 	): Promise<RawOnedevProject | null> {
@@ -234,6 +248,74 @@ export function createOnedevClient(creds: OnedevCredentials) {
 				name: p.name,
 				hasIssues: p.issueManagement,
 			}));
+		},
+
+		async createIssue(
+			projectPath: string,
+			title: string,
+			body: string | undefined,
+		): Promise<Issue> {
+			const project = await getProjectByPath(projectPath);
+			if (!project) throw new Error(`OneDev project ${projectPath} not found`);
+			const issueId = await apiPost<number>("/~api/issues", {
+				title,
+				description: body ?? "",
+				projectId: project.id,
+			});
+			const created = await apiGet<RawOnedevIssue>(`/~api/issues/${issueId}`);
+			return mapIssue(created, projectPath);
+		},
+
+		async createIssueComment(
+			projectPath: string,
+			issueNumber: number,
+			body: string,
+		): Promise<IssueComment> {
+			const query = encodeURIComponent(
+				`"Project" is "${projectPath}" and "Number" is "${issueNumber}"`,
+			);
+			const list = await apiGet<RawOnedevIssue[]>(
+				`/~api/issues?query=${query}&offset=0&count=1`,
+			);
+			const issueId = list[0]?.id;
+			if (!issueId)
+				throw new Error(`OneDev issue ${projectPath}#${issueNumber} not found`);
+			const commentId = await apiPost<number>(
+				`/~api/issues/${issueId}/comments`,
+				{ content: body },
+			);
+			const now = new Date().toISOString();
+			return {
+				id: `${commentId}`,
+				author: "me",
+				body,
+				createdAt: now,
+				updatedAt: now,
+			};
+		},
+
+		async setIssueStateByName(
+			projectPath: string,
+			issueNumber: number,
+			state: string,
+		): Promise<Issue> {
+			const query = encodeURIComponent(
+				`"Project" is "${projectPath}" and "Number" is "${issueNumber}"`,
+			);
+			const list = await apiGet<RawOnedevIssue[]>(
+				`/~api/issues?query=${query}&offset=0&count=1`,
+			);
+			const issueId = list[0]?.id;
+			if (!issueId)
+				throw new Error(`OneDev issue ${projectPath}#${issueNumber} not found`);
+			await apiPost<void>(
+				`/~api/issues/${issueId}/state-transitions`,
+				{ state },
+			);
+			const refreshed = await apiGet<RawOnedevIssue>(
+				`/~api/issues/${issueId}`,
+			);
+			return mapIssue(refreshed, projectPath);
 		},
 	};
 }
