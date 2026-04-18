@@ -3,7 +3,7 @@ import { Spinner } from "@superset/ui/spinner";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
-import { ProviderSetupCTA } from "../tasks/components/TasksView/components/ProviderSetupCTA";
+import { ProviderSetupCTA } from "../components/ProviderSetupCTA";
 import { IssueDetailSidebar } from "./components/IssueDetailSidebar";
 import { ProjectIssuesSection } from "./components/ProjectIssuesSection";
 

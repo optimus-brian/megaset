@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { FaGithub } from "react-icons/fa";
 import { HiOutlineLockClosed, HiOutlineStar } from "react-icons/hi2";
 import { electronTrpc } from "renderer/lib/electron-trpc";
-import { ProviderSetupCTA } from "../tasks/components/TasksView/components/ProviderSetupCTA";
+import { ProviderSetupCTA } from "../components/ProviderSetupCTA";
 
 export const Route = createFileRoute("/_authenticated/_dashboard/repos/")({
 	component: ReposPage,
