@@ -3,8 +3,10 @@ import type { AgentLaunchRequest } from "@superset/shared/agent-launch";
 import { Button } from "@superset/ui/button";
 import { toast } from "@superset/ui/sonner";
 import { useNavigate } from "@tanstack/react-router";
+import { openClaudeSdkTabWithPrompt } from "fork/claude-sdk/renderer/pending-launch";
+import { useClaudeSdkSettingsStore } from "fork/claude-sdk/settings-store";
 import { useMemo, useState } from "react";
-import { HiXMark } from "react-icons/hi2";
+import { HiOutlineSparkles, HiXMark } from "react-icons/hi2";
 import { AgentSelect } from "renderer/components/AgentSelect";
 import { useLinkedIssue } from "renderer/hooks/useLinkedIssue";
 import { launchAgentSession } from "renderer/lib/agent-session-orchestrator";
@@ -19,7 +21,48 @@ import {
 import { sanitizeSegment } from "shared/utils/branch";
 
 type WorkspaceMode = "main" | "worktree";
-type AgentChoice = AgentDefinitionId | "none";
+type AgentChoice = AgentDefinitionId | "none" | "claude-sdk";
+
+const CLAUDE_SDK_AGENT_VALUE = "claude-sdk" as const;
+
+interface ClaudeSdkPromptComment {
+	author: string;
+	body: string;
+	createdAt: string | number | Date;
+}
+
+function buildClaudeSdkPrompt(
+	issue: Issue,
+	comments: ClaudeSdkPromptComment[] = [],
+): string {
+	const parts: string[] = [
+		`# Issue #${issue.number}: ${issue.title}`,
+		"",
+		`Provider: ${issue.provider}`,
+		`URL: ${issue.url}`,
+		`State: ${issue.state}`,
+	];
+	if (issue.labels.length > 0) {
+		parts.push(`Labels: ${issue.labels.join(", ")}`);
+	}
+	parts.push("");
+	if (issue.body && issue.body.trim()) {
+		parts.push("## Description", issue.body.trim());
+		parts.push("");
+	}
+	if (comments.length > 0) {
+		parts.push(`## Comments (${comments.length})`);
+		for (const c of comments) {
+			const when = new Date(c.createdAt).toISOString().slice(0, 10);
+			parts.push("", `**${c.author}** _(${when})_`, "", c.body);
+		}
+		parts.push("");
+	}
+	parts.push(
+		"Plan the work for this issue first: inspect the code, outline the changes needed, and present the plan before editing anything.",
+	);
+	return parts.join("\n");
+}
 
 interface IssueDetailSidebarProps {
 	issue: Issue;
@@ -80,14 +123,15 @@ export function IssueDetailSidebar({
 		() => indexResolvedAgentConfigs(agentPresets),
 		[agentPresets],
 	);
+	const claudeSdkEnabled = useClaudeSdkSettingsStore((s) => s.enabled);
 	const defaultAgent = useMemo<AgentChoice>(() => {
+		if (claudeSdkEnabled) return CLAUDE_SDK_AGENT_VALUE;
 		if (enabledAgents.some((a) => a.id === "claude")) return "claude";
 		return enabledAgents[0]?.id ?? "none";
-	}, [enabledAgents]);
-	const [agent, setAgent] = useState<AgentChoice>("none");
+	}, [enabledAgents, claudeSdkEnabled]);
+	const [agent, setAgent] = useState<AgentChoice | null>(null);
 	const [newComment, setNewComment] = useState("");
-	const effectiveAgent: AgentChoice =
-		agent !== "none" ? agent : defaultAgent;
+	const effectiveAgent: AgentChoice = agent ?? defaultAgent;
 
 	const commentsQuery =
 		electronTrpc.gitProviders.listIssueCommentsForProject.useQuery(
@@ -120,7 +164,8 @@ export function IssueDetailSidebar({
 	const isPending = createWorkspace.isPending || openMain.isPending;
 
 	const buildLaunchRequest = (workspaceId: string) => {
-		if (effectiveAgent === "none") return undefined;
+		if (effectiveAgent === "none" || effectiveAgent === CLAUDE_SDK_AGENT_VALUE)
+			return undefined;
 		const bodyParts: string[] = [];
 		if (issue.body && issue.body.trim()) bodyParts.push(issue.body.trim());
 		if (comments.length > 0) {
@@ -171,7 +216,11 @@ export function IssueDetailSidebar({
 				projectId,
 				number: issue.number,
 				body: `Workspace **${workspaceName}** opened in Superset${
-					effectiveAgent !== "none" ? ` with agent \`${effectiveAgent}\`` : ""
+					effectiveAgent !== "none" && effectiveAgent !== CLAUDE_SDK_AGENT_VALUE
+					? ` with agent \`${effectiveAgent}\``
+					: effectiveAgent === CLAUDE_SDK_AGENT_VALUE
+					? " with Claude SDK"
+					: ""
 				}.`,
 			});
 			utils.gitProviders.listIssueCommentsForProject.invalidate({
@@ -212,6 +261,13 @@ export function IssueDetailSidebar({
 			});
 			await postWorkspaceComment(result.workspace.name);
 			await markIssueInProgress();
+				if (effectiveAgent === CLAUDE_SDK_AGENT_VALUE) {
+					openClaudeSdkTabWithPrompt(
+						result.workspace.id,
+						buildClaudeSdkPrompt(issue, comments),
+						{ permissionMode: "plan" },
+					);
+				}
 				toast.success(
 					result.wasExisting ? "Opened main workspace" : "Main workspace ready",
 				);
@@ -255,6 +311,13 @@ export function IssueDetailSidebar({
 			});
 			await postWorkspaceComment(result.workspace.name);
 			await markIssueInProgress();
+			if (effectiveAgent === CLAUDE_SDK_AGENT_VALUE) {
+				openClaudeSdkTabWithPrompt(
+					result.workspace.id,
+					buildClaudeSdkPrompt(issue, comments),
+					{ permissionMode: "plan" },
+				);
+			}
 			toast.success(
 				result.wasExisting
 					? `Opened workspace ${result.workspace.name}`
@@ -417,7 +480,7 @@ export function IssueDetailSidebar({
 						<span className="text-xs text-muted-foreground block">Agent</span>
 						<AgentSelect<AgentChoice>
 							agents={enabledAgents}
-							value={agent}
+							value={effectiveAgent}
 							placeholder="No agent"
 							onValueChange={setAgent}
 							allowNone
@@ -425,6 +488,19 @@ export function IssueDetailSidebar({
 							noneValue="none"
 							disabled={!agentPresetsQuery.isFetched}
 							triggerClassName="w-full h-8 text-xs"
+							extraOptions={
+								claudeSdkEnabled
+									? [
+											{
+												value: CLAUDE_SDK_AGENT_VALUE,
+												label: "Claude SDK (in-app)",
+												icon: (
+													<HiOutlineSparkles className="size-3.5 text-amber-500" />
+												),
+											},
+										]
+									: []
+							}
 						/>
 					</div>
 
