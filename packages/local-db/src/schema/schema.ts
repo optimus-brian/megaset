@@ -226,8 +226,6 @@ export const settings = sqliteTable("settings", {
 	exposeHostServiceViaRelay: integer("expose_host_service_via_relay", {
 		mode: "boolean",
 	}),
-	onedevUrl: text("onedev_url"),
-	onedevAccessToken: text("onedev_access_token"),
 });
 
 export type InsertSettings = typeof settings.$inferInsert;
