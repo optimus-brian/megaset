@@ -2,6 +2,9 @@ import { initSentry } from "./lib/sentry";
 
 initSentry();
 
+// Register fork module contributions (settings sections, etc.) before mount.
+import "./bootstrap-fork-modules";
+
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import ReactDom from "react-dom/client";
 import { BootErrorBoundary } from "./components/BootErrorBoundary";

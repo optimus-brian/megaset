@@ -22,7 +22,7 @@ import {
 	SETTING_ITEM_ID,
 	type SettingItemId,
 } from "../../../utils/settings-search";
-import { GitProvidersSection } from "../GitProvidersSection";
+import { useSettingsSections } from "../../../utils/settings-section-registry";
 
 interface GitSettingsProps {
 	visibleItems?: SettingItemId[] | null;
@@ -139,6 +139,7 @@ export function GitSettings({ visibleItems }: GitSettingsProps) {
 			},
 		});
 	const defaultWorktreePath = useDefaultWorktreePath();
+	const forkGitSections = useSettingsSections("git");
 
 	// Projects base dir
 	const { data: projectsBaseDir, isLoading: isProjectsBaseDirLoading } =
@@ -299,7 +300,10 @@ export function GitSettings({ visibleItems }: GitSettingsProps) {
 					</div>
 				)}
 
-				{showGitProviderGithub && <GitProvidersSection />}
+				{showGitProviderGithub &&
+					forkGitSections.map((section) => (
+						<div key={section.id}>{section.render()}</div>
+					))}
 			</div>
 		</div>
 	);

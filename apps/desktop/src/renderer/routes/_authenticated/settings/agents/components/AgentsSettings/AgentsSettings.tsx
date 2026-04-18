@@ -4,7 +4,7 @@ import {
 	SETTING_ITEM_ID,
 	type SettingItemId,
 } from "../../../utils/settings-search";
-import { ClaudeSdkAgentCard } from "fork/claude-sdk/renderer/ClaudeSdkAgentCard";
+import { useSettingsSections } from "../../../utils/settings-section-registry";
 import { AgentCard } from "./components/AgentCard";
 
 interface AgentsSettingsProps {
@@ -28,6 +28,8 @@ export function AgentsSettings({ visibleItems }: AgentsSettingsProps) {
 		visibleItems,
 	);
 
+	const forkSections = useSettingsSections("agents");
+
 	return (
 		<div className="p-6 max-w-5xl w-full">
 			<div className="mb-8">
@@ -44,7 +46,9 @@ export function AgentsSettings({ visibleItems }: AgentsSettingsProps) {
 				</p>
 			) : (
 				<div className="space-y-4">
-					<ClaudeSdkAgentCard />
+					{forkSections.map((section) => (
+						<div key={section.id}>{section.render()}</div>
+					))}
 					{presets.map((preset) => (
 						<AgentCard
 							key={preset.id}
