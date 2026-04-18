@@ -9,8 +9,8 @@ interface ProjectIssuesSectionProps {
 	projectName: string;
 	onIssueClick: (issue: Issue, projectId: string) => void;
 	activeIssueId?: string;
-	/** Optional filter that hides columns outside the selected category. */
-	categoryFilter?: Issue["state"];
+	/** Optional filter — columns whose category isn't in the set are hidden. */
+	visibleCategories?: Set<Issue["state"]>;
 }
 
 export function ProjectIssuesSection({
@@ -18,7 +18,7 @@ export function ProjectIssuesSection({
 	projectName,
 	onIssueClick,
 	activeIssueId,
-	categoryFilter,
+	visibleCategories,
 }: ProjectIssuesSectionProps) {
 	const utils = electronTrpc.useUtils();
 	const { data, isLoading } =
@@ -86,7 +86,7 @@ export function ProjectIssuesSection({
 						activeIssueId={activeIssueId}
 						onStateChange={handleStateChange}
 						states={statesQuery.data?.states}
-						categoryFilter={categoryFilter}
+						visibleCategories={visibleCategories}
 					/>
 				</div>
 			)}

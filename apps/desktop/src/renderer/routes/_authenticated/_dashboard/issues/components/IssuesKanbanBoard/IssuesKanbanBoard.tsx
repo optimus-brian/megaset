@@ -23,8 +23,11 @@ interface IssuesKanbanBoardProps {
 	boardId: string;
 	projectId?: string;
 	states?: IssueState[];
-	/** Optional filter: only columns whose category matches are rendered. */
-	categoryFilter?: Issue["state"];
+	/**
+	 * Optional filter: only columns whose category is in this set are rendered.
+	 * Undefined or empty set = show all columns.
+	 */
+	visibleCategories?: Set<Issue["state"]>;
 }
 
 export function IssuesKanbanBoard({
@@ -35,14 +38,15 @@ export function IssuesKanbanBoard({
 	boardId,
 	projectId,
 	states,
-	categoryFilter,
+	visibleCategories,
 }: IssuesKanbanBoardProps) {
 	// Top-level only: sub-issues are rendered nested under their parent card.
 	const topLevel = issues.filter((i) => i.parentIssueNumber == null);
 	const baseStates = states && states.length > 0 ? states : DEFAULT_STATES;
-	const effectiveStates = categoryFilter
-		? baseStates.filter((s) => s.category === categoryFilter)
-		: baseStates;
+	const effectiveStates =
+		visibleCategories && visibleCategories.size > 0
+			? baseStates.filter((s) => visibleCategories.has(s.category))
+			: baseStates;
 	const columns = effectiveStates.map((s) => ({
 		state: s,
 		items: topLevel.filter((i) =>
