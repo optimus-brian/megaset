@@ -113,15 +113,23 @@ export const onedevProvider: IssueProvider = {
 	async listRepositories() {
 		const { client } = await getAuthedClient();
 		const projects = await client.listProjects();
-		const baseUrl = (await requireCredentials()).url.replace(/\/+$/, "");
+		const creds = await requireCredentials();
+		const baseUrl = creds.url.replace(/\/+$/, "");
 		const host = extractHost(baseUrl);
+		// Embed PAT into the HTTPS clone URL so `git clone` authenticates without
+		// prompting. OneDev expects HTTP Basic with the PAT as the password and
+		// any non-empty username (the token is the credential).
+		const authBaseUrl = baseUrl.replace(
+			/^(https?:\/\/)/i,
+			`$1git:${encodeURIComponent(creds.token)}@`,
+		);
 		return projects.map((p) => ({
 			id: `onedev:${p.path}`,
 			provider: "onedev" as const,
 			fullName: p.path,
 			name: p.name,
 			owner: p.path.includes("/") ? p.path.split("/")[0]! : "",
-			cloneUrl: `${baseUrl}/${p.path}.git`,
+			cloneUrl: `${authBaseUrl}/${p.path}.git`,
 			sshUrl: `git@${host}:${p.path}.git`,
 			htmlUrl: `${baseUrl}/${p.path}`,
 			isPrivate: false,
