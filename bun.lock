@@ -163,6 +163,7 @@
         "@superset/db": "workspace:*",
         "@superset/desktop-mcp": "workspace:*",
         "@superset/git-provider-core": "workspace:*",
+        "@superset/git-provider-forgejo": "workspace:*",
         "@superset/git-provider-github": "workspace:*",
         "@superset/git-provider-onedev": "workspace:*",
         "@superset/host-service": "workspace:*",
@@ -766,6 +767,18 @@
       },
       "peerDependencies": {
         "electron": "*",
+      },
+    },
+    "packages/git-provider-forgejo": {
+      "name": "@superset/git-provider-forgejo",
+      "version": "0.1.0",
+      "dependencies": {
+        "@superset/git-provider-core": "workspace:*",
+      },
+      "devDependencies": {
+        "@superset/typescript": "workspace:*",
+        "bun-types": "^1.3.1",
+        "typescript": "^5.9.3",
       },
     },
     "packages/git-provider-github": {
@@ -2571,6 +2584,8 @@
     "@superset/email": ["@superset/email@workspace:packages/email"],
 
     "@superset/git-provider-core": ["@superset/git-provider-core@workspace:packages/git-provider-core"],
+
+    "@superset/git-provider-forgejo": ["@superset/git-provider-forgejo@workspace:packages/git-provider-forgejo"],
 
     "@superset/git-provider-github": ["@superset/git-provider-github@workspace:packages/git-provider-github"],
 

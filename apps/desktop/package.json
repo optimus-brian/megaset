@@ -86,6 +86,7 @@
 		"@superset/db": "workspace:*",
 		"@superset/desktop-mcp": "workspace:*",
 		"@superset/git-provider-core": "workspace:*",
+		"@superset/git-provider-forgejo": "workspace:*",
 		"@superset/git-provider-github": "workspace:*",
 		"@superset/git-provider-onedev": "workspace:*",
 		"@superset/host-service": "workspace:*",

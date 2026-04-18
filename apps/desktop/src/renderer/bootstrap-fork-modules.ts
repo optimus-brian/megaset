@@ -9,5 +9,6 @@
  */
 
 import "fork/claude-sdk/renderer/register-settings-sections";
+import "fork/forgejo-integration/renderer/register-settings-sections";
 import "fork/github-integration/renderer/register-settings-sections";
 import "fork/onedev-integration/renderer/register-settings-sections";

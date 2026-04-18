@@ -1,4 +1,8 @@
 import { gitProviderRegistry } from "@superset/git-provider-core";
+import {
+	forgejoProvider,
+	primeForgejoHost,
+} from "@superset/git-provider-forgejo";
 import { githubProvider } from "@superset/git-provider-github";
 import {
 	onedevProvider,
@@ -10,12 +14,14 @@ import {
  * Called once at main process boot. Registry is in-memory, so safe
  * to call before `app.whenReady()`.
  *
- * OneDev's URL is dynamic (self-hosted), so we prime the cached host
- * from saved credentials so the synchronous canHandle check works.
- * Best-effort: failures are silent — the provider is still registered.
+ * OneDev and Forgejo are self-hosted, so we prime their cached hosts
+ * from saved credentials so the synchronous canHandle checks work.
+ * Best-effort: failures are silent — the providers are still registered.
  */
 export function registerGitProviders(): void {
 	gitProviderRegistry.registerIssueProvider(githubProvider);
 	gitProviderRegistry.registerIssueProvider(onedevProvider);
+	gitProviderRegistry.registerIssueProvider(forgejoProvider);
 	void primeOnedevHost().catch(() => {});
+	void primeForgejoHost().catch(() => {});
 }

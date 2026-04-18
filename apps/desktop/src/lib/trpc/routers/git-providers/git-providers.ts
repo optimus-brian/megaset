@@ -5,6 +5,7 @@ import {
 	ProviderNameSchema,
 	saveToken,
 } from "@superset/git-provider-core";
+import { primeForgejoHost } from "@superset/git-provider-forgejo";
 import { primeOnedevHost } from "@superset/git-provider-onedev";
 import { projects } from "@superset/local-db";
 import { eq } from "drizzle-orm";
@@ -110,6 +111,9 @@ export const createGitProvidersRouter = () => {
 				if (input.provider === "onedev") {
 					await primeOnedevHost();
 				}
+				if (input.provider === "forgejo") {
+					await primeForgejoHost();
+				}
 				return { success: true };
 			}),
 
@@ -119,6 +123,9 @@ export const createGitProvidersRouter = () => {
 				await clearToken(input.provider);
 				if (input.provider === "onedev") {
 					await primeOnedevHost();
+				}
+				if (input.provider === "forgejo") {
+					await primeForgejoHost();
 				}
 				return { success: true };
 			}),
@@ -181,8 +188,7 @@ export const createGitProvidersRouter = () => {
 							});
 							return { provider: name, repositories, error: null };
 						} catch (err) {
-							const message =
-								err instanceof Error ? err.message : String(err);
+							const message = err instanceof Error ? err.message : String(err);
 							console.warn(
 								`[gitProviders/listAllRepositories] ${name} failed:`,
 								err,
@@ -239,10 +245,7 @@ export const createGitProvidersRouter = () => {
 					});
 					return { subIssues, provider: provider.name };
 				} catch (err) {
-					console.warn(
-						"[gitProviders/listSubIssuesForProject] failed:",
-						err,
-					);
+					console.warn("[gitProviders/listSubIssuesForProject] failed:", err);
 					return { subIssues: [], provider: provider.name };
 				}
 			}),
@@ -323,10 +326,7 @@ export const createGitProvidersRouter = () => {
 					const states = await provider.listIssueStates({ remoteUrl });
 					return { states, provider: provider.name };
 				} catch (err) {
-					console.warn(
-						"[gitProviders/listIssueStatesForProject] failed:",
-						err,
-					);
+					console.warn("[gitProviders/listIssueStatesForProject] failed:", err);
 					return { states: [], provider: provider.name };
 				}
 			}),
@@ -426,9 +426,7 @@ export const createGitProvidersRouter = () => {
 
 				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
 				if (!provider?.setIssueStateById) {
-					throw new Error(
-						"Provider does not support setting state by id",
-					);
+					throw new Error("Provider does not support setting state by id");
 				}
 				return provider.setIssueStateById({
 					remoteUrl,
