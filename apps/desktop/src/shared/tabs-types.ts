@@ -13,7 +13,8 @@ export type PaneType =
 	| "webview"
 	| "file-viewer"
 	| "chat"
-	| "devtools";
+	| "devtools"
+	| "claude-sdk";
 
 /**
  * Pane status for agent lifecycle indicators

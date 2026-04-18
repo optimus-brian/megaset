@@ -1,3 +1,4 @@
+import { createAddClaudeSdkTabAction } from "fork/claude-sdk/renderer/tab-integration";
 import type { MosaicNode } from "react-mosaic-component";
 import { updateTree } from "react-mosaic-component";
 import { getFileOpenMode } from "renderer/hooks/useFileOpenMode";
@@ -282,6 +283,8 @@ export const useTabsStore = create<TabsStore>()(
 
 					return { tabId: tab.id, paneId: pane.id };
 				},
+
+				addClaudeSdkTab: createAddClaudeSdkTabAction(set, get),
 
 				addTabWithMultiplePanes: (
 					workspaceId: string,

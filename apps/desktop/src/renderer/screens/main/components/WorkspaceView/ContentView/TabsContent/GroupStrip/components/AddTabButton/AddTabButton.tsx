@@ -10,7 +10,7 @@ import {
 } from "@superset/ui/dropdown-menu";
 import { BsTerminalPlus } from "react-icons/bs";
 import { HiMiniChevronDown } from "react-icons/hi2";
-import { LuPlus } from "react-icons/lu";
+import { LuPlus, LuSparkles } from "react-icons/lu";
 import { TbMessageCirclePlus, TbWorld } from "react-icons/tb";
 import { HotkeyMenuShortcut } from "renderer/components/HotkeyMenuShortcut";
 import { NewTabDropZone } from "../../NewTabDropZone";
@@ -24,6 +24,7 @@ interface AddTabButtonProps {
 	isLastPaneInTab: (paneId: string) => boolean;
 	onAddTerminal: () => void;
 	onAddChat: () => void;
+	onAddClaudeSdk: () => void;
 	onAddBrowser: () => void;
 	onOpenPreset: (preset: TerminalPreset) => void;
 	onConfigurePresets: () => void;
@@ -39,6 +40,7 @@ export function AddTabButton({
 	isLastPaneInTab,
 	onAddTerminal,
 	onAddChat,
+	onAddClaudeSdk,
 	onAddBrowser,
 	onOpenPreset,
 	onConfigurePresets,
@@ -69,6 +71,14 @@ export function AddTabButton({
 							>
 								<TbMessageCirclePlus className="size-3.5" />
 								Chat
+							</Button>
+							<Button
+								variant="ghost"
+								className="h-7 rounded-none border border-l-0 border-border/60 bg-muted/30 px-1.5 gap-1 text-xs text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+								onClick={onAddClaudeSdk}
+							>
+								<LuSparkles className="size-3.5" />
+								Claude SDK
 							</Button>
 							<Button
 								variant="ghost"
@@ -112,6 +122,10 @@ export function AddTabButton({
 								<TbMessageCirclePlus className="size-4" />
 								<span>Chat</span>
 								<HotkeyMenuShortcut hotkeyId="NEW_CHAT" />
+							</DropdownMenuItem>
+							<DropdownMenuItem onClick={onAddClaudeSdk} className="gap-2">
+								<LuSparkles className="size-4" />
+								<span>Claude SDK</span>
 							</DropdownMenuItem>
 							<DropdownMenuItem onClick={onAddBrowser} className="gap-2">
 								<TbWorld className="size-4" />

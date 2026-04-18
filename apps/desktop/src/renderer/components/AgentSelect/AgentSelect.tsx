@@ -7,6 +7,7 @@ import {
 	SelectValue,
 } from "@superset/ui/select";
 import { useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import {
 	getPresetIcon,
 	useIsDarkTheme,
@@ -17,6 +18,13 @@ import type {
 } from "shared/utils/agent-settings";
 
 const CONFIGURE_AGENTS_VALUE = "__configure_agents__";
+
+/** Extra entries injected above the standard agent list (e.g. fork modules). */
+export interface AgentSelectExtraOption {
+	value: string;
+	label: string;
+	icon?: ReactNode;
+}
 
 interface AgentSelectProps<T extends string> {
 	agents: ResolvedAgentConfig[];
@@ -31,6 +39,7 @@ interface AgentSelectProps<T extends string> {
 	allowNone?: boolean;
 	noneLabel?: string;
 	noneValue?: T;
+	extraOptions?: AgentSelectExtraOption[];
 }
 
 export function AgentSelect<T extends string>({
@@ -46,19 +55,26 @@ export function AgentSelect<T extends string>({
 	allowNone = false,
 	noneLabel = "No agent",
 	noneValue,
+	extraOptions,
 }: AgentSelectProps<T>) {
 	const navigate = useNavigate();
 	const isDark = useIsDarkTheme();
 	const selectableIds = new Set<AgentDefinitionId>(
 		agents.map((agent) => agent.id),
 	);
+	const extraIds = new Set<string>(
+		(extraOptions ?? []).map((opt) => opt.value),
+	);
 	const selectedValue =
 		value != null &&
 		((allowNone && value === noneValue) ||
-			selectableIds.has(value as AgentDefinitionId))
+			selectableIds.has(value as AgentDefinitionId) ||
+			extraIds.has(value as string))
 			? value
 			: undefined;
-	const showSeparator = (allowNone || agents.length > 0) && !disabled;
+	const showSeparator =
+		(allowNone || agents.length > 0 || (extraOptions?.length ?? 0) > 0) &&
+		!disabled;
 
 	const handleValueChange = (nextValue: string) => {
 		if (nextValue === CONFIGURE_AGENTS_VALUE) {
@@ -83,6 +99,14 @@ export function AgentSelect<T extends string>({
 				{allowNone && noneValue != null && (
 					<SelectItem value={noneValue}>{noneLabel}</SelectItem>
 				)}
+				{(extraOptions ?? []).map((opt) => (
+					<SelectItem key={opt.value} value={opt.value}>
+						<span className="flex items-center gap-2">
+							{opt.icon}
+							{opt.label}
+						</span>
+					</SelectItem>
+				))}
 				{agents.map((agent) => {
 					const icon = getPresetIcon(agent.id, isDark);
 					return (

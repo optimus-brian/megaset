@@ -19,6 +19,8 @@ import { Route as AuthenticatedDashboardLayoutRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsPageRouteImport } from './routes/_authenticated/settings/page'
 import { Route as AuthenticatedDashboardV2WorkspaceLayoutRouteImport } from './routes/_authenticated/_dashboard/v2-workspace/layout'
 import { Route as AuthenticatedDashboardTasksLayoutRouteImport } from './routes/_authenticated/_dashboard/tasks/layout'
+import { Route as AuthenticatedDashboardReposLayoutRouteImport } from './routes/_authenticated/_dashboard/repos/layout'
+import { Route as AuthenticatedDashboardIssuesLayoutRouteImport } from './routes/_authenticated/_dashboard/issues/layout'
 import { Route as AuthenticatedSettingsTerminalPageRouteImport } from './routes/_authenticated/settings/terminal/page'
 import { Route as AuthenticatedSettingsSecurityPageRouteImport } from './routes/_authenticated/settings/security/page'
 import { Route as AuthenticatedSettingsRingtonesPageRouteImport } from './routes/_authenticated/settings/ringtones/page'
@@ -42,6 +44,8 @@ import { Route as AuthenticatedDashboardWorkspacesPageRouteImport } from './rout
 import { Route as AuthenticatedDashboardWorkspacePageRouteImport } from './routes/_authenticated/_dashboard/workspace/page'
 import { Route as AuthenticatedDashboardV2WorkspacesPageRouteImport } from './routes/_authenticated/_dashboard/v2-workspaces/page'
 import { Route as AuthenticatedDashboardTasksPageRouteImport } from './routes/_authenticated/_dashboard/tasks/page'
+import { Route as AuthenticatedDashboardReposPageRouteImport } from './routes/_authenticated/_dashboard/repos/page'
+import { Route as AuthenticatedDashboardIssuesPageRouteImport } from './routes/_authenticated/_dashboard/issues/page'
 import { Route as AuthenticatedDashboardDashboardPageRouteImport } from './routes/_authenticated/_dashboard/dashboard/page'
 import { Route as AuthenticatedSettingsProjectProjectIdPageRouteImport } from './routes/_authenticated/settings/project/$projectId/page'
 import { Route as AuthenticatedSettingsBillingPlansPageRouteImport } from './routes/_authenticated/settings/billing/plans/page'
@@ -106,6 +110,18 @@ const AuthenticatedDashboardTasksLayoutRoute =
   AuthenticatedDashboardTasksLayoutRouteImport.update({
     id: '/tasks',
     path: '/tasks',
+    getParentRoute: () => AuthenticatedDashboardLayoutRoute,
+  } as any)
+const AuthenticatedDashboardReposLayoutRoute =
+  AuthenticatedDashboardReposLayoutRouteImport.update({
+    id: '/repos',
+    path: '/repos',
+    getParentRoute: () => AuthenticatedDashboardLayoutRoute,
+  } as any)
+const AuthenticatedDashboardIssuesLayoutRoute =
+  AuthenticatedDashboardIssuesLayoutRouteImport.update({
+    id: '/issues',
+    path: '/issues',
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
   } as any)
 const AuthenticatedSettingsTerminalPageRoute =
@@ -246,6 +262,18 @@ const AuthenticatedDashboardTasksPageRoute =
     path: '/',
     getParentRoute: () => AuthenticatedDashboardTasksLayoutRoute,
   } as any)
+const AuthenticatedDashboardReposPageRoute =
+  AuthenticatedDashboardReposPageRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedDashboardReposLayoutRoute,
+  } as any)
+const AuthenticatedDashboardIssuesPageRoute =
+  AuthenticatedDashboardIssuesPageRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedDashboardIssuesLayoutRoute,
+  } as any)
 const AuthenticatedDashboardDashboardPageRoute =
   AuthenticatedDashboardDashboardPageRouteImport.update({
     id: '/dashboard/',
@@ -326,10 +354,14 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsLayoutRouteWithChildren
   '/create-organization/': typeof CreateOrganizationPageRoute
   '/sign-in/': typeof SignInPageRoute
+  '/issues': typeof AuthenticatedDashboardIssuesLayoutRouteWithChildren
+  '/repos': typeof AuthenticatedDashboardReposLayoutRouteWithChildren
   '/tasks': typeof AuthenticatedDashboardTasksLayoutRouteWithChildren
   '/v2-workspace': typeof AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren
   '/settings/': typeof AuthenticatedSettingsPageRoute
   '/dashboard/': typeof AuthenticatedDashboardDashboardPageRoute
+  '/issues/': typeof AuthenticatedDashboardIssuesPageRoute
+  '/repos/': typeof AuthenticatedDashboardReposPageRoute
   '/tasks/': typeof AuthenticatedDashboardTasksPageRoute
   '/v2-workspaces/': typeof AuthenticatedDashboardV2WorkspacesPageRoute
   '/workspace/': typeof AuthenticatedDashboardWorkspacePageRoute
@@ -372,6 +404,8 @@ export interface FileRoutesByTo {
   '/v2-workspace': typeof AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren
   '/settings': typeof AuthenticatedSettingsPageRoute
   '/dashboard': typeof AuthenticatedDashboardDashboardPageRoute
+  '/issues': typeof AuthenticatedDashboardIssuesPageRoute
+  '/repos': typeof AuthenticatedDashboardReposPageRoute
   '/tasks': typeof AuthenticatedDashboardTasksPageRoute
   '/v2-workspaces': typeof AuthenticatedDashboardV2WorkspacesPageRoute
   '/workspace': typeof AuthenticatedDashboardWorkspacePageRoute
@@ -416,10 +450,14 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsLayoutRouteWithChildren
   '/create-organization/': typeof CreateOrganizationPageRoute
   '/sign-in/': typeof SignInPageRoute
+  '/_authenticated/_dashboard/issues': typeof AuthenticatedDashboardIssuesLayoutRouteWithChildren
+  '/_authenticated/_dashboard/repos': typeof AuthenticatedDashboardReposLayoutRouteWithChildren
   '/_authenticated/_dashboard/tasks': typeof AuthenticatedDashboardTasksLayoutRouteWithChildren
   '/_authenticated/_dashboard/v2-workspace': typeof AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren
   '/_authenticated/settings/': typeof AuthenticatedSettingsPageRoute
   '/_authenticated/_dashboard/dashboard/': typeof AuthenticatedDashboardDashboardPageRoute
+  '/_authenticated/_dashboard/issues/': typeof AuthenticatedDashboardIssuesPageRoute
+  '/_authenticated/_dashboard/repos/': typeof AuthenticatedDashboardReposPageRoute
   '/_authenticated/_dashboard/tasks/': typeof AuthenticatedDashboardTasksPageRoute
   '/_authenticated/_dashboard/v2-workspaces/': typeof AuthenticatedDashboardV2WorkspacesPageRoute
   '/_authenticated/_dashboard/workspace/': typeof AuthenticatedDashboardWorkspacePageRoute
@@ -462,10 +500,14 @@ export interface FileRouteTypes {
     | '/settings'
     | '/create-organization/'
     | '/sign-in/'
+    | '/issues'
+    | '/repos'
     | '/tasks'
     | '/v2-workspace'
     | '/settings/'
     | '/dashboard/'
+    | '/issues/'
+    | '/repos/'
     | '/tasks/'
     | '/v2-workspaces/'
     | '/workspace/'
@@ -508,6 +550,8 @@ export interface FileRouteTypes {
     | '/v2-workspace'
     | '/settings'
     | '/dashboard'
+    | '/issues'
+    | '/repos'
     | '/tasks'
     | '/v2-workspaces'
     | '/workspace'
@@ -551,10 +595,14 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/create-organization/'
     | '/sign-in/'
+    | '/_authenticated/_dashboard/issues'
+    | '/_authenticated/_dashboard/repos'
     | '/_authenticated/_dashboard/tasks'
     | '/_authenticated/_dashboard/v2-workspace'
     | '/_authenticated/settings/'
     | '/_authenticated/_dashboard/dashboard/'
+    | '/_authenticated/_dashboard/issues/'
+    | '/_authenticated/_dashboard/repos/'
     | '/_authenticated/_dashboard/tasks/'
     | '/_authenticated/_dashboard/v2-workspaces/'
     | '/_authenticated/_dashboard/workspace/'
@@ -668,6 +716,20 @@ declare module '@tanstack/react-router' {
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof AuthenticatedDashboardTasksLayoutRouteImport
+      parentRoute: typeof AuthenticatedDashboardLayoutRoute
+    }
+    '/_authenticated/_dashboard/repos': {
+      id: '/_authenticated/_dashboard/repos'
+      path: '/repos'
+      fullPath: '/repos'
+      preLoaderRoute: typeof AuthenticatedDashboardReposLayoutRouteImport
+      parentRoute: typeof AuthenticatedDashboardLayoutRoute
+    }
+    '/_authenticated/_dashboard/issues': {
+      id: '/_authenticated/_dashboard/issues'
+      path: '/issues'
+      fullPath: '/issues'
+      preLoaderRoute: typeof AuthenticatedDashboardIssuesLayoutRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
     '/_authenticated/settings/terminal/': {
@@ -831,6 +893,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardTasksPageRouteImport
       parentRoute: typeof AuthenticatedDashboardTasksLayoutRoute
     }
+    '/_authenticated/_dashboard/repos/': {
+      id: '/_authenticated/_dashboard/repos/'
+      path: '/'
+      fullPath: '/repos/'
+      preLoaderRoute: typeof AuthenticatedDashboardReposPageRouteImport
+      parentRoute: typeof AuthenticatedDashboardReposLayoutRoute
+    }
+    '/_authenticated/_dashboard/issues/': {
+      id: '/_authenticated/_dashboard/issues/'
+      path: '/'
+      fullPath: '/issues/'
+      preLoaderRoute: typeof AuthenticatedDashboardIssuesPageRouteImport
+      parentRoute: typeof AuthenticatedDashboardIssuesLayoutRoute
+    }
     '/_authenticated/_dashboard/dashboard/': {
       id: '/_authenticated/_dashboard/dashboard/'
       path: '/dashboard'
@@ -918,6 +994,35 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedDashboardIssuesLayoutRouteChildren {
+  AuthenticatedDashboardIssuesPageRoute: typeof AuthenticatedDashboardIssuesPageRoute
+}
+
+const AuthenticatedDashboardIssuesLayoutRouteChildren: AuthenticatedDashboardIssuesLayoutRouteChildren =
+  {
+    AuthenticatedDashboardIssuesPageRoute:
+      AuthenticatedDashboardIssuesPageRoute,
+  }
+
+const AuthenticatedDashboardIssuesLayoutRouteWithChildren =
+  AuthenticatedDashboardIssuesLayoutRoute._addFileChildren(
+    AuthenticatedDashboardIssuesLayoutRouteChildren,
+  )
+
+interface AuthenticatedDashboardReposLayoutRouteChildren {
+  AuthenticatedDashboardReposPageRoute: typeof AuthenticatedDashboardReposPageRoute
+}
+
+const AuthenticatedDashboardReposLayoutRouteChildren: AuthenticatedDashboardReposLayoutRouteChildren =
+  {
+    AuthenticatedDashboardReposPageRoute: AuthenticatedDashboardReposPageRoute,
+  }
+
+const AuthenticatedDashboardReposLayoutRouteWithChildren =
+  AuthenticatedDashboardReposLayoutRoute._addFileChildren(
+    AuthenticatedDashboardReposLayoutRouteChildren,
+  )
+
 interface AuthenticatedDashboardTasksLayoutRouteChildren {
   AuthenticatedDashboardTasksPageRoute: typeof AuthenticatedDashboardTasksPageRoute
   AuthenticatedDashboardTasksTaskIdPageRoute: typeof AuthenticatedDashboardTasksTaskIdPageRoute
@@ -954,6 +1059,8 @@ const AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren =
   )
 
 interface AuthenticatedDashboardLayoutRouteChildren {
+  AuthenticatedDashboardIssuesLayoutRoute: typeof AuthenticatedDashboardIssuesLayoutRouteWithChildren
+  AuthenticatedDashboardReposLayoutRoute: typeof AuthenticatedDashboardReposLayoutRouteWithChildren
   AuthenticatedDashboardTasksLayoutRoute: typeof AuthenticatedDashboardTasksLayoutRouteWithChildren
   AuthenticatedDashboardV2WorkspaceLayoutRoute: typeof AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren
   AuthenticatedDashboardDashboardPageRoute: typeof AuthenticatedDashboardDashboardPageRoute
@@ -967,6 +1074,10 @@ interface AuthenticatedDashboardLayoutRouteChildren {
 
 const AuthenticatedDashboardLayoutRouteChildren: AuthenticatedDashboardLayoutRouteChildren =
   {
+    AuthenticatedDashboardIssuesLayoutRoute:
+      AuthenticatedDashboardIssuesLayoutRouteWithChildren,
+    AuthenticatedDashboardReposLayoutRoute:
+      AuthenticatedDashboardReposLayoutRouteWithChildren,
     AuthenticatedDashboardTasksLayoutRoute:
       AuthenticatedDashboardTasksLayoutRouteWithChildren,
     AuthenticatedDashboardV2WorkspaceLayoutRoute:

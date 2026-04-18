@@ -4,6 +4,7 @@ import {
 	SETTING_ITEM_ID,
 	type SettingItemId,
 } from "../../../utils/settings-search";
+import { ClaudeSdkAgentCard } from "fork/claude-sdk/renderer/ClaudeSdkAgentCard";
 import { AgentCard } from "./components/AgentCard";
 
 interface AgentsSettingsProps {
@@ -43,6 +44,7 @@ export function AgentsSettings({ visibleItems }: AgentsSettingsProps) {
 				</p>
 			) : (
 				<div className="space-y-4">
+					<ClaudeSdkAgentCard />
 					{presets.map((preset) => (
 						<AgentCard
 							key={preset.id}

@@ -38,6 +38,7 @@ export function GroupStrip() {
 	const activeTabIds = useTabsStore((s) => s.activeTabIds);
 	const tabHistoryStacks = useTabsStore((s) => s.tabHistoryStacks);
 	const addChatTab = useTabsStore((s) => s.addChatTab);
+	const addClaudeSdkTab = useTabsStore((s) => s.addClaudeSdkTab);
 	const addBrowserTab = useTabsStore((s) => s.addBrowserTab);
 	const renameTab = useTabsStore((s) => s.renameTab);
 	const setActiveTab = useTabsStore((s) => s.setActiveTab);
@@ -227,6 +228,11 @@ export function GroupStrip() {
 		addChatTab(activeWorkspaceId);
 	};
 
+	const handleAddClaudeSdk = () => {
+		if (!activeWorkspaceId) return;
+		addClaudeSdkTab(activeWorkspaceId);
+	};
+
 	const handleAddBrowser = () => {
 		if (!activeWorkspaceId) return;
 		addBrowserTab(activeWorkspaceId);
@@ -323,6 +329,7 @@ export function GroupStrip() {
 			isLastPaneInTab={checkIsLastPaneInTab}
 			onAddTerminal={handleAddGroup}
 			onAddChat={handleAddChat}
+			onAddClaudeSdk={handleAddClaudeSdk}
 			onAddBrowser={handleAddBrowser}
 			onOpenPreset={handleOpenPreset}
 			onConfigurePresets={handleOpenPresetsSettings}
