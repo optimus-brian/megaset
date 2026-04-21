@@ -7,12 +7,17 @@ import {
 	SelectValue,
 } from "@superset/ui/select";
 import { toast } from "@superset/ui/sonner";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+	HiOutlineArrowTopRightOnSquare,
 	HiOutlineChevronDown,
 	HiOutlineChevronRight,
+	HiOutlineEye,
+	HiOutlineFolderOpen,
+	HiOutlinePaperClip,
 	HiOutlineSparkles,
 	HiOutlineWrenchScrewdriver,
+	HiOutlineXMark,
 } from "react-icons/hi2";
 import { LuSquare } from "react-icons/lu";
 import { useClaudeSdkPendingLaunchStore } from "fork/claude-sdk/renderer/pending-launch";
@@ -21,6 +26,7 @@ import {
 	useClaudeSdkSettingsStore,
 } from "fork/claude-sdk/settings-store";
 import { electronTrpc } from "renderer/lib/electron-trpc";
+import { useTabsStore } from "renderer/stores/tabs/store";
 import { Streamdown } from "streamdown";
 
 interface ClaudeSdkPaneProps {
@@ -47,6 +53,93 @@ type Turn =
 			input: Record<string, unknown>;
 			resolved?: "allow" | "deny";
 	  };
+
+interface Attachment {
+	id: string;
+	mediaType: string;
+	dataUrl: string;
+	name: string;
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(reader.result as string);
+		reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+		reader.readAsDataURL(file);
+	});
+}
+
+function stripDataUrlPrefix(dataUrl: string): string {
+	const comma = dataUrl.indexOf(",");
+	return comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+}
+
+/**
+ * Extract a file path from a Claude Agent SDK tool invocation so the UI can
+ * offer "open / reveal" actions. Returns null if the tool has no file arg.
+ */
+function extractFilePath(
+	toolName: string,
+	input: unknown,
+): string | null {
+	if (!input || typeof input !== "object") return null;
+	const o = input as Record<string, unknown>;
+	const pick = (...keys: string[]): string | null => {
+		for (const k of keys) {
+			const v = o[k];
+			if (typeof v === "string" && v.trim().length > 0) return v;
+		}
+		return null;
+	};
+	switch (toolName) {
+		case "Read":
+		case "Write":
+		case "Edit":
+		case "MultiEdit":
+			return pick("file_path", "filePath", "path");
+		case "NotebookEdit":
+		case "NotebookRead":
+			return pick("notebook_path", "notebookPath", "file_path");
+		case "LS":
+		case "Glob":
+		case "Grep":
+			return pick("path");
+		default:
+			return null;
+	}
+}
+
+function resolveAbsolutePath(
+	filePath: string,
+	cwd: string | undefined,
+): string {
+	if (filePath.startsWith("/") || /^[A-Za-z]:[\\/]/.test(filePath)) {
+		return filePath;
+	}
+	if (filePath.startsWith("~/") && typeof cwd === "string") {
+		// Best-effort; main process resolves ~ via shell.openPath too.
+		return filePath;
+	}
+	if (!cwd) return filePath;
+	const sep = cwd.endsWith("/") ? "" : "/";
+	return `${cwd}${sep}${filePath}`;
+}
+
+function isPathWithinCwd(absolutePath: string, cwd: string | undefined): boolean {
+	if (!cwd) return false;
+	const normalizedCwd = cwd.endsWith("/") ? cwd.slice(0, -1) : cwd;
+	return (
+		absolutePath === normalizedCwd ||
+		absolutePath.startsWith(`${normalizedCwd}/`)
+	);
+}
+
+// Resume-session persistence is handled by the main process via the
+// `claudeSdk.getResumeId` / `claudeSdk.setResumeId` tRPC endpoints. File-backed
+// storage there writes synchronously on every change — unlike Chromium's
+// localStorage which flushes lazily and loses pending writes when the app is
+// killed (e.g. during app updates).
 
 type UsageState = {
 	inputTokens: number;
@@ -120,8 +213,14 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 
 	const [sessionId, setSessionId] = useState<string | null>(null);
 	const [resumeSessionId, setResumeSessionId] = useState<string | null>(null);
+	const [resumeHydrated, setResumeHydrated] = useState(false);
+	const resumeIdQuery = electronTrpc.claudeSdk.getResumeId.useQuery({ paneId });
+	const setResumeIdMutation = electronTrpc.claudeSdk.setResumeId.useMutation();
 	const [turns, setTurns] = useState<Turn[]>([]);
 	const [input, setInput] = useState("");
+	const [attachments, setAttachments] = useState<Attachment[]>([]);
+	const [dragOver, setDragOver] = useState(false);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [running, setRunning] = useState(false);
 	const [model, setModel] = useState<string>(sdkSettings.defaultModel);
 	const [effort, setEffort] = useState<string>(sdkSettings.defaultEffort);
@@ -148,6 +247,8 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 	const sendMessage = electronTrpc.claudeSdk.sendMessage.useMutation();
 	const stopSession = electronTrpc.claudeSdk.stopSession.useMutation();
 	const approveTool = electronTrpc.claudeSdk.approveTool.useMutation();
+	const updatePermissionMode =
+		electronTrpc.claudeSdk.setPermissionMode.useMutation();
 
 	electronTrpc.claudeSdk.events.useSubscription(
 		sessionId ? { sessionId } : (undefined as never),
@@ -264,11 +365,92 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 		el.scrollTop = el.scrollHeight;
 	}, [turns.length]);
 
+	useEffect(() => {
+		if (resumeHydrated) return;
+		if (resumeIdQuery.data) {
+			const loaded = resumeIdQuery.data.resumeSessionId;
+			if (loaded) setResumeSessionId(loaded);
+			setResumeHydrated(true);
+		}
+	}, [resumeHydrated, resumeIdQuery.data]);
+
+	useEffect(() => {
+		if (!resumeHydrated) return;
+		setResumeIdMutation.mutate({ paneId, resumeSessionId });
+	}, [paneId, resumeSessionId, resumeHydrated, setResumeIdMutation]);
+
+	const addFiles = useCallback(async (files: File[]) => {
+		const images = files.filter((f) => f.type.startsWith("image/"));
+		if (images.length === 0) {
+			if (files.length > 0)
+				toast.error("Only image files are supported right now.");
+			return;
+		}
+		const loaded = await Promise.all(
+			images.map(async (file) => ({
+				id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+				mediaType: file.type,
+				dataUrl: await readFileAsDataUrl(file),
+				name: file.name,
+			})),
+		);
+		setAttachments((prev) => [...prev, ...loaded]);
+	}, []);
+
+	const removeAttachment = (id: string) => {
+		setAttachments((prev) => prev.filter((a) => a.id !== id));
+	};
+
+	const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+		const items = e.clipboardData?.items;
+		if (!items) return;
+		const files: File[] = [];
+		for (const item of items) {
+			if (item.kind === "file") {
+				const f = item.getAsFile();
+				if (f) files.push(f);
+			}
+		}
+		if (files.length > 0) {
+			e.preventDefault();
+			void addFiles(files);
+		}
+	};
+
+	const handleDragOver = (e: React.DragEvent) => {
+		if (e.dataTransfer.types.includes("Files")) {
+			e.preventDefault();
+			e.dataTransfer.dropEffect = "copy";
+			setDragOver(true);
+		}
+	};
+
+	const handleDragLeave = (e: React.DragEvent) => {
+		if (e.currentTarget === e.target) setDragOver(false);
+	};
+
+	const handleDrop = (e: React.DragEvent) => {
+		if (!e.dataTransfer.types.includes("Files")) return;
+		e.preventDefault();
+		e.stopPropagation();
+		setDragOver(false);
+		const files = Array.from(e.dataTransfer.files);
+		if (files.length > 0) void addFiles(files);
+	};
+
 	const handleSend = async () => {
 		const text = input.trim();
-		if (!text || !cwd) return;
+		const hasAttachments = attachments.length > 0;
+		if ((!text && !hasAttachments) || !cwd) return;
+		const snapshot = attachments;
 		setInput("");
-		setTurns((prev) => [...prev, { kind: "user", text }]);
+		setAttachments([]);
+		const displayText = hasAttachments
+			? text
+				? `${text}\n\n[${snapshot.length} image${snapshot.length > 1 ? "s" : ""} attached]`
+				: `[${snapshot.length} image${snapshot.length > 1 ? "s" : ""} attached]`
+			: text;
+		setTurns((prev) => [...prev, { kind: "user", text: displayText }]);
 		setRunning(true);
 		try {
 			let sid = sessionId;
@@ -290,7 +472,18 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 				sid = result.sessionId;
 				setSessionId(sid);
 			}
-			await sendMessage.mutateAsync({ sessionId: sid, text });
+			await sendMessage.mutateAsync({
+				sessionId: sid,
+				text,
+				...(hasAttachments
+					? {
+							attachments: snapshot.map((a) => ({
+								mediaType: a.mediaType,
+								data: stripDataUrlPrefix(a.dataUrl),
+							})),
+						}
+					: {}),
+			});
 		} catch (err) {
 			toast.error(
 				err instanceof Error ? err.message : "Failed to send message",
@@ -380,17 +573,97 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 		});
 	};
 
-	const handleAnswerQuestion = (approvalId: string, answer: string) => {
+	// AskUserQuestion: feed answers back via the documented `allow + updatedInput`
+	// shape — `{ questions, answers: { [questionText]: label } }`. The SDK's
+	// built-in tool recognizes this and returns it as the tool result without
+	// trying to prompt the user itself.
+	// Docs: https://code.claude.com/docs/en/agent-sdk/user-input#return-answers-to-claude
+	const handleAnswerQuestion = (
+		approvalId: string,
+		toolInput: Record<string, unknown>,
+		answersByQuestion: Record<string, string>,
+	) => {
 		if (!sessionId) return;
+		const questions = (toolInput as { questions?: unknown }).questions;
 		approveTool.mutate({
 			sessionId,
 			approvalId,
 			decision: {
-				behavior: "deny",
-				message: `User answered AskUserQuestion. Treat this as the tool's response and continue based on these answers:\n\n${answer}`,
+				behavior: "allow",
+				updatedInput: {
+					questions,
+					answers: answersByQuestion,
+				},
 			},
 		});
 	};
+
+	const addFileViewerPane = useTabsStore((s) => s.addFileViewerPane);
+	const openInFinder = electronTrpc.external.openInFinder.useMutation();
+	const openFileInEditor =
+		electronTrpc.external.openFileInEditor.useMutation();
+	const trpcUtils = electronTrpc.useUtils();
+
+	const fileActions = useMemo(
+		() => ({
+			openInViewer: async (filePath: string) => {
+				// Expand ~/ and relative paths via the main process so we get a real
+				// absolute path. Tilde resolution can't happen in the renderer since
+				// it has no access to os.homedir().
+				let abs: string;
+				try {
+					abs = await trpcUtils.external.resolvePath.fetch({
+						path: filePath,
+						...(cwd ? { cwd } : {}),
+					});
+				} catch {
+					abs = resolveAbsolutePath(filePath, cwd);
+				}
+
+				// The inline file viewer reads through workspace-fs, which is restricted
+				// to the workspace root (memory files, ~/.claude/..., or sibling repos
+				// all sit outside). Fall back to the user's configured editor in that
+				// case so the preview button still does something useful.
+				if (isPathWithinCwd(abs, cwd)) {
+					addFileViewerPane(workspaceId, { filePath: abs });
+					return;
+				}
+
+				openFileInEditor.mutate(
+					{ path: abs, ...(cwd ? { cwd } : {}) },
+					{
+						onError: (err) =>
+							toast.error(`Open failed: ${err.message ?? "unknown"}`),
+					},
+				);
+			},
+			openInEditor: (filePath: string) => {
+				const abs = resolveAbsolutePath(filePath, cwd);
+				openFileInEditor.mutate(
+					{ path: abs, ...(cwd ? { cwd } : {}) },
+					{
+						onError: (err) =>
+							toast.error(`Open failed: ${err.message ?? "unknown"}`),
+					},
+				);
+			},
+			revealInFinder: (filePath: string) => {
+				const abs = resolveAbsolutePath(filePath, cwd);
+				openInFinder.mutate(abs, {
+					onError: (err) =>
+						toast.error(`Reveal failed: ${err.message ?? "unknown"}`),
+				});
+			},
+		}),
+		[
+			addFileViewerPane,
+			workspaceId,
+			cwd,
+			openFileInEditor,
+			openInFinder,
+			trpcUtils,
+		],
+	);
 
 	const handleStop = () => {
 		if (!sessionId) return;
@@ -419,7 +692,16 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 	};
 	const handlePermissionChange = (v: string) => {
 		setPermissionMode(v);
-		restartOnSettingChange("Permission mode");
+		if (sessionId) {
+			updatePermissionMode.mutate({
+				sessionId,
+				mode: v as
+					| "default"
+					| "acceptEdits"
+					| "bypassPermissions"
+					| "plan",
+			});
+		}
 	};
 
 	const handleNewChat = () => {
@@ -446,12 +728,24 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 	return (
 		<div className="flex flex-col h-full bg-background">
 			{/* Message list */}
-			<div ref={scrollRef} className="flex-1 overflow-y-auto">
+			<div ref={scrollRef} className="flex-1 overflow-y-auto select-text">
 				<div className="p-4 space-y-4">
 					{turns.length === 0 && (
 						<div className="text-center text-xs text-muted-foreground py-12">
 							<HiOutlineSparkles className="size-8 mx-auto mb-2 opacity-30" />
-							<p>Send a message to start a Claude session.</p>
+							{resumeSessionId ? (
+								<>
+									<p>Resuming previous session on next message.</p>
+									<p
+										className="mt-1 opacity-60 font-mono truncate max-w-xs mx-auto"
+										title={resumeSessionId}
+									>
+										{resumeSessionId.slice(0, 8)}…
+									</p>
+								</>
+							) : (
+								<p>Send a message to start a Claude session.</p>
+							)}
 							<p className="mt-1 opacity-60 font-mono">{formatPath(cwd) || "—"}</p>
 						</div>
 					)}
@@ -461,6 +755,7 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 							turn={turn}
 							onApprove={handleApprove}
 							onAnswerQuestion={handleAnswerQuestion}
+							fileActions={fileActions}
 						/>
 					))}
 					{running && (
@@ -473,15 +768,76 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 			</div>
 
 			{/* Input area — full width */}
-			<div className="border-t border-border bg-muted/10 p-3">
-				<div className="flex gap-2">
+			<div
+				className={`border-t border-border p-3 transition-colors ${
+					dragOver
+						? "bg-primary/10 ring-1 ring-primary/40"
+						: "bg-muted/10"
+				}`}
+				onDragOver={handleDragOver}
+				onDragLeave={handleDragLeave}
+				onDrop={handleDrop}
+			>
+				{attachments.length > 0 && (
+					<div className="flex flex-wrap gap-2 mb-2">
+						{attachments.map((a) => (
+							<div
+								key={a.id}
+								className="relative group rounded-md border border-border bg-background overflow-hidden"
+								title={a.name}
+							>
+								<img
+									src={a.dataUrl}
+									alt={a.name}
+									className="size-14 object-cover"
+								/>
+								<button
+									type="button"
+									onClick={() => removeAttachment(a.id)}
+									aria-label={`Remove ${a.name}`}
+									className="absolute top-0.5 right-0.5 size-4 rounded-full bg-background/80 text-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground transition"
+								>
+									<HiOutlineXMark className="size-3" />
+								</button>
+							</div>
+						))}
+					</div>
+				)}
+				<input
+					ref={fileInputRef}
+					type="file"
+					accept="image/*"
+					multiple
+					className="hidden"
+					onChange={(e) => {
+						const files = e.target.files ? Array.from(e.target.files) : [];
+						if (files.length > 0) void addFiles(files);
+						e.target.value = "";
+					}}
+				/>
+				<div className="flex gap-2 items-end">
+					<Button
+						size="sm"
+						variant="ghost"
+						onClick={() => fileInputRef.current?.click()}
+						disabled={!cwd}
+						title="Attach image"
+						className="shrink-0 h-9 px-2"
+					>
+						<HiOutlinePaperClip className="size-4" />
+					</Button>
 					<textarea
 						value={input}
 						onChange={(e) => setInput(e.target.value)}
-						placeholder="Message Claude…  (⌘+Enter to send)"
+						onPaste={handlePaste}
+						placeholder={
+							dragOver
+								? "Drop images here…"
+								: "Message Claude…  (⌘+Enter to send, paste or drop images)"
+						}
 						rows={2}
 						disabled={!cwd}
-						className="flex-1 text-sm bg-background border border-border rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+						className="flex-1 text-sm bg-background border border-border rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 field-sizing-content min-h-[3.75rem] max-h-[60vh] overflow-y-auto"
 						onKeyDown={(e) => {
 							if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
 								e.preventDefault();
@@ -492,7 +848,7 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 					<Button
 						size="sm"
 						onClick={handleSend}
-						disabled={!input.trim() || !cwd}
+						disabled={(!input.trim() && attachments.length === 0) || !cwd}
 					>
 						Send
 					</Button>
@@ -808,14 +1164,26 @@ function PillSelect({
 	);
 }
 
+interface FileActions {
+	openInViewer: (filePath: string) => void | Promise<void>;
+	openInEditor: (filePath: string) => void;
+	revealInFinder: (filePath: string) => void;
+}
+
 function TurnView({
 	turn,
 	onApprove,
 	onAnswerQuestion,
+	fileActions,
 }: {
 	turn: Turn;
 	onApprove: (id: string, decision: "allow" | "deny") => void;
-	onAnswerQuestion: (id: string, answer: string) => void;
+	onAnswerQuestion: (
+		id: string,
+		toolInput: Record<string, unknown>,
+		answersByQuestion: Record<string, string>,
+	) => void;
+	fileActions: FileActions;
 }) {
 	switch (turn.kind) {
 		case "user":
@@ -829,13 +1197,20 @@ function TurnView({
 		case "assistant":
 			return (
 				<div className="text-sm prose prose-sm dark:prose-invert max-w-none">
-					<Streamdown>{turn.text}</Streamdown>
+					<Streamdown
+						components={{
+							a: (props) => <AssistantLink {...props} fileActions={fileActions} />,
+							code: (props) => <AssistantCode {...props} fileActions={fileActions} />,
+						}}
+					>
+						{turn.text}
+					</Streamdown>
 				</div>
 			);
 		case "thinking":
 			return <ThinkingBlock text={turn.text} />;
 		case "tool":
-			return <ToolBlock turn={turn} />;
+			return <ToolBlock turn={turn} fileActions={fileActions} />;
 		case "approval":
 			if (turn.toolName === "AskUserQuestion") {
 				return (
@@ -849,6 +1224,120 @@ function TurnView({
 		default:
 			return null;
 	}
+}
+
+function AssistantLink({
+	href,
+	children,
+	fileActions,
+	...rest
+}: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+	fileActions: FileActions;
+}) {
+	const openUrl = electronTrpc.external.openUrl.useMutation();
+	const isFile =
+		typeof href === "string" &&
+		(href.startsWith("file://") ||
+			href.startsWith("/") ||
+			href.startsWith("~/"));
+	if (isFile && href) {
+		const path = href.startsWith("file://")
+			? decodeURIComponent(href.slice("file://".length))
+			: href;
+		const onClick = (e: React.MouseEvent) => {
+			e.preventDefault();
+			// Shift-click = reveal in Finder; Cmd/Ctrl-click = open in system editor;
+			// plain click = inline viewer pane.
+			if (e.shiftKey) fileActions.revealInFinder(path);
+			else if (e.metaKey || e.ctrlKey) fileActions.openInEditor(path);
+			else fileActions.openInViewer(path);
+		};
+		return (
+			<button
+				type="button"
+				onClick={onClick}
+				className="text-primary underline decoration-dotted underline-offset-2 hover:decoration-solid"
+				title="Click: viewer · ⌘-click: editor · ⇧-click: Finder"
+			>
+				{children}
+			</button>
+		);
+	}
+	return (
+		<a
+			{...rest}
+			href={href}
+			target="_blank"
+			rel="noopener noreferrer"
+			onClick={(e) => {
+				if (href && /^https?:\/\//.test(href)) {
+					e.preventDefault();
+					openUrl.mutate(href);
+				}
+			}}
+		>
+			{children}
+		</a>
+	);
+}
+
+const PATH_LIKE_RE =
+	/^~?[\w./-]*\/[\w./-]+\.[a-zA-Z0-9]{1,8}$|^\/[\w./-]+$|^~\/[\w./-]+$/;
+
+/**
+ * Detect whether an inline-code span looks like a file/directory path.
+ * Matches absolute paths (`/Users/...`), home paths (`~/...`), and
+ * relative paths with an extension (`foo/bar.md`).
+ */
+function looksLikePath(text: string): boolean {
+	if (!text || text.length > 300) return false;
+	if (/\s/.test(text)) return false;
+	return PATH_LIKE_RE.test(text);
+}
+
+function AssistantCode({
+	className,
+	children,
+	fileActions,
+	inline,
+	...rest
+}: React.HTMLAttributes<HTMLElement> & {
+	fileActions: FileActions;
+	inline?: boolean;
+}) {
+	const text =
+		typeof children === "string"
+			? children
+			: Array.isArray(children) &&
+					children.every((c) => typeof c === "string")
+				? children.join("")
+				: null;
+
+	// Only linkify single-line inline code (no <pre> block context).
+	const isBlock = className?.includes("language-") ?? false;
+	if (!isBlock && text && looksLikePath(text)) {
+		const onClick = (e: React.MouseEvent) => {
+			e.preventDefault();
+			if (e.shiftKey) fileActions.revealInFinder(text);
+			else if (e.metaKey || e.ctrlKey) fileActions.openInEditor(text);
+			else fileActions.openInViewer(text);
+		};
+		return (
+			<button
+				type="button"
+				onClick={onClick}
+				className={`${className ?? ""} cursor-pointer underline decoration-dotted underline-offset-2 hover:decoration-solid`}
+				title="Click: viewer · ⌘-click: editor · ⇧-click: Finder"
+			>
+				{children}
+			</button>
+		);
+	}
+	return (
+		<code className={className} {...rest}>
+			{children}
+		</code>
+	);
 }
 
 function ThinkingBlock({ text }: { text: string }) {
@@ -878,36 +1367,101 @@ function ThinkingBlock({ text }: { text: string }) {
 
 function ToolBlock({
 	turn,
+	fileActions,
 }: {
 	turn: Extract<Turn, { kind: "tool" }>;
+	fileActions: FileActions;
 }) {
 	const [open, setOpen] = useState(false);
 	const inputStr = useMemo(
 		() => JSON.stringify(turn.input, null, 2),
 		[turn.input],
 	);
+	const filePath = useMemo(
+		() => extractFilePath(turn.name, turn.input),
+		[turn.name, turn.input],
+	);
+	const canViewFile =
+		filePath &&
+		["Read", "Write", "Edit", "MultiEdit", "NotebookEdit", "NotebookRead"].includes(
+			turn.name,
+		);
+	const fileLabel = filePath ? formatPath(filePath) : null;
+
 	return (
 		<div className="rounded-md border border-border bg-muted/20 text-xs">
-			<button
-				type="button"
-				onClick={() => setOpen(!open)}
-				className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-muted/40"
-			>
-				{open ? (
-					<HiOutlineChevronDown className="size-3" />
-				) : (
-					<HiOutlineChevronRight className="size-3" />
+			<div className="flex items-center gap-1 px-2 py-1.5 hover:bg-muted/40">
+				<button
+					type="button"
+					onClick={() => setOpen(!open)}
+					className="flex items-center gap-2 min-w-0 flex-1 text-left"
+				>
+					{open ? (
+						<HiOutlineChevronDown className="size-3 shrink-0" />
+					) : (
+						<HiOutlineChevronRight className="size-3 shrink-0" />
+					)}
+					<HiOutlineWrenchScrewdriver className="size-3 text-muted-foreground shrink-0" />
+					<span className="font-mono shrink-0">{turn.name}</span>
+					{fileLabel && (
+						<span
+							className="font-mono text-muted-foreground truncate"
+							title={filePath ?? undefined}
+						>
+							{fileLabel}
+						</span>
+					)}
+				</button>
+				{filePath && (
+					<div className="flex items-center gap-0.5 shrink-0">
+						{canViewFile && (
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									fileActions.openInViewer(filePath);
+								}}
+								className="p-1 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+								title="Open in viewer pane"
+								aria-label={`Open ${filePath} in viewer`}
+							>
+								<HiOutlineEye className="size-3" />
+							</button>
+						)}
+						<button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								fileActions.openInEditor(filePath);
+							}}
+							className="p-1 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+							title="Open with default editor/app"
+							aria-label={`Open ${filePath} with default editor`}
+						>
+							<HiOutlineArrowTopRightOnSquare className="size-3" />
+						</button>
+						<button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								fileActions.revealInFinder(filePath);
+							}}
+							className="p-1 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+							title="Reveal in Finder"
+							aria-label={`Reveal ${filePath} in Finder`}
+						>
+							<HiOutlineFolderOpen className="size-3" />
+						</button>
+					</div>
 				)}
-				<HiOutlineWrenchScrewdriver className="size-3 text-muted-foreground" />
-				<span className="font-mono">{turn.name}</span>
 				{turn.resultText !== undefined && (
 					<span
-						className={`ml-auto text-[10px] ${turn.isError ? "text-destructive" : "text-green-500"}`}
+						className={`ml-1 text-[10px] shrink-0 ${turn.isError ? "text-destructive" : "text-green-500"}`}
 					>
 						{turn.isError ? "error" : "ok"}
 					</span>
 				)}
-			</button>
+			</div>
 			{open && (
 				<div className="px-2 pb-2 space-y-1.5">
 					<pre className="font-mono text-[10px] whitespace-pre-wrap text-muted-foreground">
@@ -945,7 +1499,11 @@ function AskUserQuestionPicker({
 	onAnswerQuestion,
 }: {
 	turn: Extract<Turn, { kind: "approval" }>;
-	onAnswerQuestion: (id: string, answer: string) => void;
+	onAnswerQuestion: (
+		id: string,
+		toolInput: Record<string, unknown>,
+		answersByQuestion: Record<string, string>,
+	) => void;
 }) {
 	const questions: AskUserQuestionItem[] = useMemo(() => {
 		const raw = (turn.input as { questions?: unknown }).questions;
@@ -953,47 +1511,148 @@ function AskUserQuestionPicker({
 	}, [turn.input]);
 	const [picked, setPicked] = useState<Record<number, Set<string>>>({});
 	const [customText, setCustomText] = useState<Record<number, string>>({});
+	const [activeIdx, setActiveIdx] = useState(0);
+	const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const toggle = (qIdx: number, label: string, multi: boolean) => {
-		setPicked((prev) => {
-			const next = { ...prev };
-			const current = new Set(prev[qIdx] ?? []);
-			if (multi) {
-				if (current.has(label)) current.delete(label);
-				else current.add(label);
-			} else {
-				current.clear();
-				current.add(label);
+	// Refs mirror the latest state so deferred callbacks (setTimeout, kbd
+	// handler) never read stale closures — same trick as t3code's
+	// `onAdvanceRef.current()` in ComposerPendingUserInputPanel.tsx.
+	const pickedRef = useRef(picked);
+	const customTextRef = useRef(customText);
+	const activeIdxRef = useRef(activeIdx);
+	useEffect(() => {
+		pickedRef.current = picked;
+	}, [picked]);
+	useEffect(() => {
+		customTextRef.current = customText;
+	}, [customText]);
+	useEffect(() => {
+		activeIdxRef.current = activeIdx;
+	}, [activeIdx]);
+
+	const activeQuestion = questions[activeIdx];
+	const isMulti = activeQuestion?.multiSelect === true;
+	const activePicked = picked[activeIdx] ?? new Set<string>();
+	const activeCustom = customText[activeIdx] ?? "";
+
+	useEffect(
+		() => () => {
+			if (autoAdvanceRef.current !== null) {
+				clearTimeout(autoAdvanceRef.current);
 			}
-			next[qIdx] = current;
-			return next;
-		});
-	};
+		},
+		[],
+	);
 
-	const canSubmit = questions.every((q, i) => {
-		const selected = picked[i]?.size ?? 0;
-		const text = customText[i]?.trim();
-		return selected > 0 || !!text;
-	});
-
-	const submit = () => {
+	const submitAll = useCallback(() => {
 		if (turn.resolved) return;
-		const lines: string[] = [];
+		// AskUserQuestionOutput expects `answers: { [questionText]: string }`.
+		// Multi-select answers are comma-separated per the SDK contract.
+		const latestPicked = pickedRef.current;
+		const latestText = customTextRef.current;
+		const answers: Record<string, string> = {};
 		questions.forEach((q, i) => {
-			const selected = Array.from(picked[i] ?? []);
-			const text = customText[i]?.trim();
-			const answer =
+			const selected = Array.from(latestPicked[i] ?? []);
+			const text = latestText[i]?.trim();
+			const value =
 				selected.length > 0 && text
-					? `${selected.join(", ")} — additional note: ${text}`
+					? `${selected.join(", ")} — ${text}`
 					: selected.length > 0
 						? selected.join(", ")
-						: (text ?? "(no answer)");
-			lines.push(`Q${i + 1}: ${q.question}`);
-			lines.push(`A${i + 1}: ${answer}`);
-			lines.push("");
+						: (text ?? "");
+			answers[q.question] = value;
 		});
-		onAnswerQuestion(turn.approvalId, lines.join("\n").trimEnd());
-	};
+		onAnswerQuestion(
+			turn.approvalId,
+			turn.input as Record<string, unknown>,
+			answers,
+		);
+	}, [onAnswerQuestion, questions, turn.approvalId, turn.input, turn.resolved]);
+
+	const advance = useCallback(() => {
+		if (activeIdxRef.current + 1 >= questions.length) {
+			submitAll();
+			return;
+		}
+		setActiveIdx((i) => i + 1);
+	}, [questions.length, submitAll]);
+
+	const advanceRef = useRef(advance);
+	useEffect(() => {
+		advanceRef.current = advance;
+	}, [advance]);
+
+	const toggleOption = useCallback(
+		(label: string) => {
+			if (turn.resolved) return;
+			setPicked((prev) => {
+				const next = { ...prev };
+				const current = new Set(prev[activeIdx] ?? []);
+				if (isMulti) {
+					if (current.has(label)) current.delete(label);
+					else current.add(label);
+				} else {
+					current.clear();
+					current.add(label);
+				}
+				next[activeIdx] = current;
+				return next;
+			});
+
+			if (!isMulti) {
+				if (autoAdvanceRef.current !== null) {
+					clearTimeout(autoAdvanceRef.current);
+				}
+				autoAdvanceRef.current = setTimeout(() => {
+					autoAdvanceRef.current = null;
+					advanceRef.current();
+				}, 200);
+			}
+		},
+		[activeIdx, isMulti, turn.resolved],
+	);
+
+	// Number keys 1–9 select the corresponding option, Enter advances (used when
+	// multi-select or when the user wants to move on with a custom-text answer).
+	useEffect(() => {
+		if (!activeQuestion || turn.resolved) return;
+		const handler = (event: KeyboardEvent) => {
+			if (event.metaKey || event.ctrlKey || event.altKey) return;
+			const target = event.target;
+			if (
+				target instanceof HTMLInputElement ||
+				target instanceof HTMLTextAreaElement
+			) {
+				return;
+			}
+			if (event.key === "Enter") {
+				const hasAnswer =
+					(picked[activeIdx]?.size ?? 0) > 0 ||
+					(customText[activeIdx]?.trim().length ?? 0) > 0;
+				if (!hasAnswer) return;
+				event.preventDefault();
+				advance();
+				return;
+			}
+			const digit = Number.parseInt(event.key, 10);
+			if (Number.isNaN(digit) || digit < 1 || digit > 9) return;
+			const optionIndex = digit - 1;
+			const option = activeQuestion.options[optionIndex];
+			if (!option) return;
+			event.preventDefault();
+			toggleOption(option.label);
+		};
+		document.addEventListener("keydown", handler);
+		return () => document.removeEventListener("keydown", handler);
+	}, [
+		activeIdx,
+		activeQuestion,
+		advance,
+		customText,
+		picked,
+		toggleOption,
+		turn.resolved,
+	]);
 
 	if (questions.length === 0) {
 		return (
@@ -1003,85 +1662,120 @@ function AskUserQuestionPicker({
 		);
 	}
 
+	if (!activeQuestion) {
+		return null;
+	}
+
+	const hasAnswer =
+		activePicked.size > 0 || activeCustom.trim().length > 0;
+	const isLast = activeIdx + 1 >= questions.length;
+
 	return (
 		<div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 space-y-3">
-			<div className="flex items-center gap-2 text-xs font-medium text-amber-600">
-				<HiOutlineSparkles className="size-3.5" />
-				Claude is asking
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-2 text-xs font-medium text-amber-600">
+					<HiOutlineSparkles className="size-3.5" />
+					Claude is asking
+				</div>
+				{questions.length > 1 && (
+					<span className="rounded-md bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground/70">
+						{activeIdx + 1}/{questions.length}
+					</span>
+				)}
 			</div>
-			{questions.map((q, qIdx) => {
-				const multi = q.multiSelect === true;
-				const current = picked[qIdx] ?? new Set<string>();
-				return (
-					<div key={qIdx} className="space-y-2">
-						{q.header && (
-							<div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-								{q.header}
-							</div>
-						)}
-						<div className="text-sm font-medium">{q.question}</div>
-						<div className="space-y-1">
-							{q.options.map((opt) => {
-								const active = current.has(opt.label);
-								return (
-									<button
-										type="button"
-										key={opt.label}
-										disabled={!!turn.resolved}
-										onClick={() => toggle(qIdx, opt.label, multi)}
-										className={`w-full text-left rounded-md border px-2 py-1.5 text-xs transition-colors ${
-											active
-												? "border-amber-500 bg-amber-500/20"
-												: "border-border hover:bg-muted/40"
-										} disabled:opacity-50`}
-									>
-										<div className="flex items-center gap-2">
-											<span
-												className={`inline-block size-3 shrink-0 rounded-full border ${
-													active
-														? "bg-amber-500 border-amber-500"
-														: "border-border"
-												}`}
-											/>
-											<span className="font-medium">{opt.label}</span>
-										</div>
-										{opt.description && (
-											<div className="mt-0.5 ml-5 text-[11px] text-muted-foreground leading-snug">
-												{opt.description}
-											</div>
-										)}
-									</button>
-								);
-							})}
-						</div>
-						<textarea
-							value={customText[qIdx] ?? ""}
-							onChange={(e) =>
-								setCustomText((prev) => ({ ...prev, [qIdx]: e.target.value }))
-							}
-							placeholder="Or type your own answer…"
-							rows={1}
-							disabled={!!turn.resolved}
-							className="w-full text-xs bg-background border border-border rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-						/>
+			<div className="space-y-2">
+				{activeQuestion.header && (
+					<div className="text-[10px] uppercase tracking-wide text-muted-foreground/60">
+						{activeQuestion.header}
 					</div>
-				);
-			})}
+				)}
+				<div className="text-sm font-medium">{activeQuestion.question}</div>
+				{isMulti && (
+					<p className="text-[11px] text-muted-foreground/70">
+						Select one or more. Press <kbd className="rounded bg-muted/60 px-1 font-mono">Enter</kbd> when done.
+					</p>
+				)}
+				<div className="space-y-1">
+					{activeQuestion.options.map((opt, index) => {
+						const active = activePicked.has(opt.label);
+						const shortcut = index < 9 ? index + 1 : null;
+						return (
+							<button
+								type="button"
+								key={opt.label}
+								disabled={!!turn.resolved}
+								onClick={() => toggleOption(opt.label)}
+								className={`group flex w-full items-center gap-2.5 rounded-md border px-2.5 py-1.5 text-left transition-all ${
+									active
+										? "border-amber-500/70 bg-amber-500/15"
+										: "border-transparent bg-muted/20 hover:bg-muted/40 hover:border-border/40"
+								} disabled:opacity-50 disabled:cursor-not-allowed`}
+							>
+								{shortcut !== null && (
+									<kbd
+										className={`flex size-5 shrink-0 items-center justify-center rounded font-mono text-[11px] tabular-nums transition-colors ${
+											active
+												? "bg-amber-500/25 text-amber-500"
+												: "bg-muted/50 text-muted-foreground/60 group-hover:bg-muted/70 group-hover:text-muted-foreground/80"
+										}`}
+									>
+										{shortcut}
+									</kbd>
+								)}
+								<div className="min-w-0 flex-1">
+									<span className="text-sm font-medium">{opt.label}</span>
+									{opt.description && opt.description !== opt.label && (
+										<span className="ml-2 text-[11px] text-muted-foreground/60">
+											{opt.description}
+										</span>
+									)}
+								</div>
+								{active && (
+									<span className="text-amber-500 text-xs shrink-0">✓</span>
+								)}
+							</button>
+						);
+					})}
+				</div>
+				<textarea
+					value={activeCustom}
+					onChange={(e) =>
+						setCustomText((prev) => ({ ...prev, [activeIdx]: e.target.value }))
+					}
+					onKeyDown={(e) => {
+						if (
+							(e.metaKey || e.ctrlKey) &&
+							e.key === "Enter" &&
+							hasAnswer &&
+							!turn.resolved
+						) {
+							e.preventDefault();
+							advance();
+						}
+					}}
+					placeholder="Or type your own answer… (⌘+Enter to send)"
+					rows={1}
+					disabled={!!turn.resolved}
+					className="w-full text-xs bg-background border border-border rounded px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+				/>
+			</div>
 			{turn.resolved ? (
 				<div className="text-[11px] italic text-muted-foreground">
 					✓ Answered.
 				</div>
 			) : (
-				<div className="flex justify-end">
-					<Button
-						size="sm"
-						disabled={!canSubmit}
-						onClick={submit}
-						className="h-7 text-xs"
-					>
-						Send answer
-					</Button>
-				</div>
+				(isMulti || activeCustom.trim().length > 0) && (
+					<div className="flex justify-end">
+						<Button
+							size="sm"
+							disabled={!hasAnswer}
+							onClick={advance}
+							className="h-7 text-xs"
+						>
+							{isLast ? "Send answer" : "Next"}
+						</Button>
+					</div>
+				)
 			)}
 		</div>
 	);
