@@ -144,6 +144,43 @@ function useFireIntent(pendingId: string, pending: PendingWorkspaceRow | null) {
 				}
 			}
 
+			// Bump linked provider issues to "in progress" once the workspace
+			// exists. Fire-and-forget: a provider-side failure (auth/network)
+			// shouldn't block the user from getting into their worktree, but
+			// we still surface it via toast so they know to retry manually.
+			if (
+				result.workspace?.id &&
+				(pending.intent === "fork" || pending.intent === "pr-checkout") &&
+				pending.linkedIssues.length > 0
+			) {
+				for (const issue of pending.linkedIssues) {
+					if (issue.source === "internal") continue;
+					if (typeof issue.number !== "number") continue;
+					trpcUtils.client.gitProviders.setIssueStateForProject
+						.mutate({
+							projectId: pending.projectId,
+							number: issue.number,
+							targetState: "in_progress",
+						})
+						.then(() => {
+							void trpcUtils.gitProviders.listIssuesForProject.invalidate({
+								projectId: pending.projectId,
+							});
+						})
+						.catch((err: unknown) => {
+							const msg = err instanceof Error ? err.message : String(err);
+							console.warn(
+								`[pending] failed to mark issue #${issue.number} in progress:`,
+								err,
+							);
+							toast.warning(
+								`Couldn't update issue #${issue.number} status`,
+								{ description: msg },
+							);
+						});
+				}
+			}
+
 			// V2 dispatch: after host-service.create resolves, build the launch
 			// plan and stash it on the pending row. The V2 workspace page's
 			// useConsumePendingLaunch mount-effect picks it up and opens the
