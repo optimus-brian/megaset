@@ -1,4 +1,5 @@
 import type { BrowserWindow } from "electron";
+import { createClaudeSdkRouter } from "fork/claude-sdk/trpc";
 import { router } from "..";
 import { createAnalyticsRouter } from "./analytics";
 import { createAuthRouter } from "./auth";
@@ -9,7 +10,6 @@ import { createCacheRouter } from "./cache";
 import { createChangesRouter } from "./changes";
 import { createChatRuntimeServiceRouter } from "./chat-runtime-service";
 import { createChatServiceRouter } from "./chat-service";
-import { createClaudeSdkRouter } from "fork/claude-sdk/trpc";
 import { createConfigRouter } from "./config";
 import { createDeviceRouter } from "./device";
 import { createExternalRouter } from "./external";

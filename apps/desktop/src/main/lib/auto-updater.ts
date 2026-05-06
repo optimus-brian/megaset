@@ -239,8 +239,11 @@ export function simulateError(): void {
 }
 
 export function setupAutoUpdater(): void {
-	// Auto-update disabled for self-hosted fork — use ~/bin/superset-update instead
-	return;
+	// Auto-update disabled for self-hosted fork — use ~/bin/superset-update instead.
+	// Rest of the function preserved (gated behind an always-false flag) to keep
+	// merge churn against upstream low.
+	const FORK_AUTO_UPDATE_ENABLED = false;
+	if (!FORK_AUTO_UPDATE_ENABLED) return;
 
 	// Squirrel.Mac install failures happen in ShipIt out-of-process and never
 	// reach the lib's `error` event, so route both the lib's internal logger

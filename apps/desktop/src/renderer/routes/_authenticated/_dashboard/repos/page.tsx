@@ -1,7 +1,7 @@
 import { Button } from "@superset/ui/button";
 import { Input } from "@superset/ui/input";
-import { Spinner } from "@superset/ui/spinner";
 import { toast } from "@superset/ui/sonner";
+import { Spinner } from "@superset/ui/spinner";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import type { IconType } from "react-icons";

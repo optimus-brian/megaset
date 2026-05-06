@@ -54,12 +54,9 @@ export function useLinkedIssue(workspaceId: string | undefined | null) {
 	const map = useSyncExternalStore(subscribe, read, () => EMPTY);
 	const issue = workspaceId ? map[workspaceId] : undefined;
 
-	const link = useCallback(
-		(wsId: string, value: LinkedIssue) => {
-			write({ ...read(), [wsId]: value });
-		},
-		[],
-	);
+	const link = useCallback((wsId: string, value: LinkedIssue) => {
+		write({ ...read(), [wsId]: value });
+	}, []);
 
 	const unlink = useCallback((wsId: string) => {
 		const current = read();

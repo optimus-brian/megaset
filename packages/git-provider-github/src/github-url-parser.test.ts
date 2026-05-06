@@ -37,25 +37,35 @@ describe("parseGitHubRemote", () => {
 		});
 	});
 	it("returns null for non-GitHub URL", () => {
-		expect(parseGitHubRemote("https://onedev.rieth.io/hyperset.git")).toBeNull();
+		expect(
+			parseGitHubRemote("https://onedev.rieth.io/hyperset.git"),
+		).toBeNull();
 		expect(parseGitHubRemote("git@gitlab.com:x/y.git")).toBeNull();
 	});
 	it("parses repo names with dots", () => {
-		expect(parseGitHubRemote("https://github.com/microsoft/vscode.dev")).toEqual({
+		expect(
+			parseGitHubRemote("https://github.com/microsoft/vscode.dev"),
+		).toEqual({
 			owner: "microsoft",
 			repo: "vscode.dev",
 		});
-		expect(parseGitHubRemote("git@github.com:rails/rails.github.com.git")).toEqual({
+		expect(
+			parseGitHubRemote("git@github.com:rails/rails.github.com.git"),
+		).toEqual({
 			owner: "rails",
 			repo: "rails.github.com",
 		});
 	});
 	it("strips trailing URL segments", () => {
-		expect(parseGitHubRemote("https://github.com/owner/repo/issues/42")).toEqual({
+		expect(
+			parseGitHubRemote("https://github.com/owner/repo/issues/42"),
+		).toEqual({
 			owner: "owner",
 			repo: "repo",
 		});
-		expect(parseGitHubRemote("https://github.com/owner/repo?tab=readme")).toEqual({
+		expect(
+			parseGitHubRemote("https://github.com/owner/repo?tab=readme"),
+		).toEqual({
 			owner: "owner",
 			repo: "repo",
 		});

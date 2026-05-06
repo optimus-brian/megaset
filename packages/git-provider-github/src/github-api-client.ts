@@ -30,8 +30,9 @@ function parentNumberFromUrl(
 ): number | undefined {
 	if (!url) return undefined;
 	const match = url.match(/\/issues\/(\d+)$/);
-	if (!match) return undefined;
-	const parsed = Number.parseInt(match[1]!, 10);
+	const numberPart = match?.[1];
+	if (!numberPart) return undefined;
+	const parsed = Number.parseInt(numberPart, 10);
 	return Number.isNaN(parsed) ? undefined : parsed;
 }
 

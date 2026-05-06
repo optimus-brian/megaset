@@ -12,7 +12,7 @@ import { eq } from "drizzle-orm";
 import { localDb } from "main/lib/local-db";
 import { z } from "zod";
 import { publicProcedure, router } from "../..";
-import { execWithShellEnv } from "../workspaces/utils/shell-env";
+import { execGitWithShellPath } from "../workspaces/utils/git-client";
 
 async function ensureHostsPrimed(): Promise<void> {
 	await Promise.all([
@@ -62,8 +62,7 @@ export const createGitProvidersRouter = () => {
 
 				let remoteUrl: string;
 				try {
-					const { stdout } = await execWithShellEnv(
-						"git",
+					const { stdout } = await execGitWithShellPath(
 						["remote", "get-url", "origin"],
 						{ cwd: project.mainRepoPath, timeout: 5000 },
 					);
@@ -233,8 +232,7 @@ export const createGitProvidersRouter = () => {
 
 				let remoteUrl: string;
 				try {
-					const { stdout } = await execWithShellEnv(
-						"git",
+					const { stdout } = await execGitWithShellPath(
 						["remote", "get-url", "origin"],
 						{ cwd: project.mainRepoPath, timeout: 5000 },
 					);
@@ -278,8 +276,7 @@ export const createGitProvidersRouter = () => {
 
 				let remoteUrl: string;
 				try {
-					const { stdout } = await execWithShellEnv(
-						"git",
+					const { stdout } = await execGitWithShellPath(
 						["remote", "get-url", "origin"],
 						{ cwd: project.mainRepoPath, timeout: 5000 },
 					);
@@ -319,8 +316,7 @@ export const createGitProvidersRouter = () => {
 
 				let remoteUrl: string;
 				try {
-					const { stdout } = await execWithShellEnv(
-						"git",
+					const { stdout } = await execGitWithShellPath(
 						["remote", "get-url", "origin"],
 						{ cwd: project.mainRepoPath, timeout: 5000 },
 					);
@@ -360,8 +356,7 @@ export const createGitProvidersRouter = () => {
 					.get();
 				if (!project) throw new Error("Project not found");
 
-				const { stdout } = await execWithShellEnv(
-					"git",
+				const { stdout } = await execGitWithShellPath(
 					["remote", "get-url", "origin"],
 					{ cwd: project.mainRepoPath, timeout: 5000 },
 				);
@@ -430,8 +425,7 @@ export const createGitProvidersRouter = () => {
 					.get();
 				if (!project) throw new Error("Project not found");
 
-				const { stdout } = await execWithShellEnv(
-					"git",
+				const { stdout } = await execGitWithShellPath(
 					["remote", "get-url", "origin"],
 					{ cwd: project.mainRepoPath, timeout: 5000 },
 				);
@@ -466,8 +460,7 @@ export const createGitProvidersRouter = () => {
 					.get();
 				if (!project) throw new Error("Project not found");
 
-				const { stdout } = await execWithShellEnv(
-					"git",
+				const { stdout } = await execGitWithShellPath(
 					["remote", "get-url", "origin"],
 					{ cwd: project.mainRepoPath, timeout: 5000 },
 				);
@@ -502,8 +495,7 @@ export const createGitProvidersRouter = () => {
 					.get();
 				if (!project) throw new Error("Project not found");
 
-				const { stdout } = await execWithShellEnv(
-					"git",
+				const { stdout } = await execGitWithShellPath(
 					["remote", "get-url", "origin"],
 					{ cwd: project.mainRepoPath, timeout: 5000 },
 				);
@@ -539,8 +531,7 @@ export const createGitProvidersRouter = () => {
 
 				let remoteUrl: string;
 				try {
-					const { stdout } = await execWithShellEnv(
-						"git",
+					const { stdout } = await execGitWithShellPath(
 						["remote", "get-url", "origin"],
 						{ cwd: project.mainRepoPath, timeout: 5000 },
 					);

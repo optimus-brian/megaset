@@ -113,11 +113,7 @@ export function createForgejoClient(creds: ForgejoCredentials) {
 		return raw ? (JSON.parse(raw) as T) : (undefined as unknown as T);
 	}
 
-	function mapIssue(
-		raw: RawForgejoIssue,
-		owner: string,
-		repo: string,
-	): Issue {
+	function mapIssue(raw: RawForgejoIssue, owner: string, repo: string): Issue {
 		return {
 			id: `forgejo:${owner}/${repo}#${raw.number}`,
 			provider: "forgejo",

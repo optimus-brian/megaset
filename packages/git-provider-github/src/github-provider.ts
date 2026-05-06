@@ -1,5 +1,5 @@
-import { loadToken } from "@superset/git-provider-core";
 import type { IssueProvider } from "@superset/git-provider-core";
+import { loadToken } from "@superset/git-provider-core";
 import { createGitHubClient } from "./github-api-client";
 import { canHandleGitHubUrl, parseGitHubRemote } from "./github-url-parser";
 

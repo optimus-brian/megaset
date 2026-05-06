@@ -5,9 +5,9 @@ describe("parseOnedevRemote", () => {
 	const host = "onedev.example.com";
 
 	it("parses HTTPS URL with simple project", () => {
-		expect(parseOnedevRemote("https://onedev.example.com/myproj", host)).toEqual(
-			{ projectPath: "myproj" },
-		);
+		expect(
+			parseOnedevRemote("https://onedev.example.com/myproj", host),
+		).toEqual({ projectPath: "myproj" });
 	});
 
 	it("parses HTTPS URL with nested project path", () => {
@@ -35,9 +35,9 @@ describe("parseOnedevRemote", () => {
 	});
 
 	it("is case-insensitive on host", () => {
-		expect(
-			parseOnedevRemote("https://OneDev.Example.Com/foo", host),
-		).toEqual({ projectPath: "foo" });
+		expect(parseOnedevRemote("https://OneDev.Example.Com/foo", host)).toEqual({
+			projectPath: "foo",
+		});
 	});
 
 	it("accepts host given with https:// prefix", () => {
@@ -50,15 +50,11 @@ describe("parseOnedevRemote", () => {
 	});
 
 	it("rejects different host", () => {
-		expect(
-			parseOnedevRemote("https://github.com/foo/bar", host),
-		).toBeNull();
+		expect(parseOnedevRemote("https://github.com/foo/bar", host)).toBeNull();
 	});
 
 	it("rejects when host is empty", () => {
-		expect(
-			parseOnedevRemote("https://onedev.example.com/foo", ""),
-		).toBeNull();
+		expect(parseOnedevRemote("https://onedev.example.com/foo", "")).toBeNull();
 	});
 });
 

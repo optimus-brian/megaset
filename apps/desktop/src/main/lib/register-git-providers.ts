@@ -4,10 +4,7 @@ import {
 	primeForgejoHost,
 } from "@superset/git-provider-forgejo";
 import { githubProvider } from "@superset/git-provider-github";
-import {
-	onedevProvider,
-	primeOnedevHost,
-} from "@superset/git-provider-onedev";
+import { onedevProvider, primeOnedevHost } from "@superset/git-provider-onedev";
 
 /**
  * Registers built-in git providers in the global registry.

@@ -262,7 +262,6 @@ export const createChatPane = (
 	};
 };
 
-
 /**
  * Options for creating a browser pane
  */

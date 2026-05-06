@@ -1,6 +1,9 @@
-import { loadToken } from "@superset/git-provider-core";
 import type { IssueProvider } from "@superset/git-provider-core";
-import { createOnedevClient, type OnedevCredentials } from "./onedev-api-client";
+import { loadToken } from "@superset/git-provider-core";
+import {
+	createOnedevClient,
+	type OnedevCredentials,
+} from "./onedev-api-client";
 import { canHandleOnedevUrl, parseOnedevRemote } from "./onedev-url-parser";
 
 /**
@@ -65,7 +68,8 @@ export const onedevProvider: IssueProvider = {
 		const projectPath = await projectFromRemote(remoteUrl);
 		const { client } = await getAuthedClient();
 		const issue = await client.getIssue(projectPath, number);
-		if (!issue) throw new Error(`OneDev issue ${projectPath}#${number} not found`);
+		if (!issue)
+			throw new Error(`OneDev issue ${projectPath}#${number} not found`);
 		return issue;
 	},
 
@@ -128,7 +132,7 @@ export const onedevProvider: IssueProvider = {
 			provider: "onedev" as const,
 			fullName: p.path,
 			name: p.name,
-			owner: p.path.includes("/") ? p.path.split("/")[0]! : "",
+			owner: p.path.split("/")[0] ?? "",
 			cloneUrl: `${authBaseUrl}/${p.path}.git`,
 			sshUrl: `git@${host}:${p.path}.git`,
 			htmlUrl: `${baseUrl}/${p.path}`,

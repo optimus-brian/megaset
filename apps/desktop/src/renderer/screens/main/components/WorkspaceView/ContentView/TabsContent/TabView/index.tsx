@@ -1,6 +1,7 @@
 import "react-mosaic-component/react-mosaic-component.css";
 import "./mosaic-theme.css";
 
+import { ClaudeSdkPane } from "fork/claude-sdk/renderer/ClaudeSdkPane";
 import { useCallback, useEffect, useMemo } from "react";
 import {
 	Mosaic,
@@ -20,7 +21,6 @@ import {
 } from "renderer/stores/tabs/utils";
 import { useTheme } from "renderer/stores/theme";
 import { BrowserPane } from "./BrowserPane";
-import { ClaudeSdkPane } from "fork/claude-sdk/renderer/ClaudeSdkPane";
 import { ChatPane } from "./ChatPane";
 import { CommentPane } from "./CommentPane";
 import { MosaicSplitOverlay } from "./components";
@@ -221,12 +221,7 @@ export function TabView({ tab }: TabViewProps) {
 
 			// Route Claude SDK panes
 			if (paneInfo.type === "claude-sdk") {
-				return (
-					<ClaudeSdkPane
-						paneId={paneId}
-						workspaceId={tab.workspaceId}
-					/>
-				);
+				return <ClaudeSdkPane paneId={paneId} workspaceId={tab.workspaceId} />;
 			}
 
 			// Route browser panes to BrowserPane component

@@ -71,10 +71,7 @@ interface ConversationStoreState {
 	conversations: Record<string, PaneConversation>;
 	ensure: (paneId: string) => PaneConversation;
 	patch: (paneId: string, patch: Partial<PaneConversation>) => void;
-	updateTurns: (
-		paneId: string,
-		updater: (prev: Turn[]) => Turn[],
-	) => void;
+	updateTurns: (paneId: string, updater: (prev: Turn[]) => Turn[]) => void;
 	reset: (paneId: string) => void;
 	remove: (paneId: string) => void;
 }

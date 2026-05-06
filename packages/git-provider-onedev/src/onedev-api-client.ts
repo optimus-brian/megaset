@@ -1,4 +1,8 @@
-import type { Issue, IssueComment, IssueState } from "@superset/git-provider-core";
+import type {
+	Issue,
+	IssueComment,
+	IssueState,
+} from "@superset/git-provider-core";
 
 export interface OnedevCredentials {
 	/** Base URL without trailing slash, e.g. "https://onedev.example.com". */
@@ -51,9 +55,7 @@ interface RawOnedevStateSpec {
 }
 
 /** Map a OneDev state name into one of the three normalized categories. */
-function mapStateToCategory(
-	state: string,
-): "open" | "in_progress" | "closed" {
+function mapStateToCategory(state: string): "open" | "in_progress" | "closed" {
 	const s = state.toLowerCase();
 	if (s.includes("close") || s === "done" || s === "resolved") return "closed";
 	if (
@@ -119,7 +121,7 @@ export function createOnedevClient(creds: OnedevCredentials) {
 		return `${baseUrl}/${projectPath}/~issues/${number}`;
 	}
 
-	async function getUserName(id: number): Promise<string> {
+	async function _getUserName(id: number): Promise<string> {
 		try {
 			const u = await apiGet<RawOnedevUser>(`/~api/users/${id}`);
 			return u.fullName ?? u.name ?? `user${id}`;
@@ -308,13 +310,10 @@ export function createOnedevClient(creds: OnedevCredentials) {
 			const issueId = list[0]?.id;
 			if (!issueId)
 				throw new Error(`OneDev issue ${projectPath}#${issueNumber} not found`);
-			await apiPost<void>(
-				`/~api/issues/${issueId}/state-transitions`,
-				{ state },
-			);
-			const refreshed = await apiGet<RawOnedevIssue>(
-				`/~api/issues/${issueId}`,
-			);
+			await apiPost<void>(`/~api/issues/${issueId}/state-transitions`, {
+				state,
+			});
+			const refreshed = await apiGet<RawOnedevIssue>(`/~api/issues/${issueId}`);
 			return mapIssue(refreshed, projectPath);
 		},
 	};

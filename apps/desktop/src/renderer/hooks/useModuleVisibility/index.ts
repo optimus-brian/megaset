@@ -1,1 +1,1 @@
-export { useModuleVisibility, type ModuleKey } from "./useModuleVisibility";
+export { type ModuleKey, useModuleVisibility } from "./useModuleVisibility";

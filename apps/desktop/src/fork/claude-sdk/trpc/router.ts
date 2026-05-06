@@ -24,9 +24,7 @@ export const createClaudeSdkRouter = () => {
 					cwd: z.string().min(1),
 					systemPrompt: z.string().optional(),
 					model: z.string().optional(),
-					effort: z
-						.enum(["low", "medium", "high", "xhigh", "max"])
-						.optional(),
+					effort: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
 					permissionMode: PermissionModeSchema,
 					resumeSessionId: z.string().optional(),
 				}),
@@ -102,12 +100,7 @@ export const createClaudeSdkRouter = () => {
 			.input(
 				z.object({
 					sessionId: z.string().min(1),
-					mode: z.enum([
-						"default",
-						"acceptEdits",
-						"bypassPermissions",
-						"plan",
-					]),
+					mode: z.enum(["default", "acceptEdits", "bypassPermissions", "plan"]),
 				}),
 			)
 			.mutation(async ({ input }) => {

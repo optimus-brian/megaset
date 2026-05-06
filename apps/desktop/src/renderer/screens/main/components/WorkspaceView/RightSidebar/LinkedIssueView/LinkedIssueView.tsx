@@ -264,8 +264,7 @@ function LinkedIssueContent({
 				{/* Activity */}
 				<div className="px-3 py-2.5">
 					<h4 className="text-xs font-medium text-muted-foreground mb-2">
-						Activity{" "}
-						<span className="font-normal">({comments.length})</span>
+						Activity <span className="font-normal">({comments.length})</span>
 					</h4>
 
 					{commentsQuery.isLoading ? (
@@ -318,11 +317,7 @@ function LinkedIssueContent({
 					rows={1}
 					className="flex-1 resize-none text-xs bg-transparent border border-border rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-ring max-h-48"
 					onKeyDown={(e) => {
-						if (
-							e.key === "Enter" &&
-							(e.metaKey || e.ctrlKey) &&
-							draft.trim()
-						) {
+						if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && draft.trim()) {
 							e.preventDefault();
 							handleSubmit();
 						}

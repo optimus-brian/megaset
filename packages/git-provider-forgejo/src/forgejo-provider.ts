@@ -1,13 +1,10 @@
-import { loadToken } from "@superset/git-provider-core";
 import type { IssueProvider } from "@superset/git-provider-core";
+import { loadToken } from "@superset/git-provider-core";
 import {
 	createForgejoClient,
 	type ForgejoCredentials,
 } from "./forgejo-api-client";
-import {
-	canHandleForgejoUrl,
-	parseForgejoRemote,
-} from "./forgejo-url-parser";
+import { canHandleForgejoUrl, parseForgejoRemote } from "./forgejo-url-parser";
 
 /**
  * Forgejo credentials are stored as a JSON string under the `forgejo` slot

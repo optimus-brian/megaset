@@ -1,6 +1,6 @@
 import type { Issue } from "@superset/git-provider-core";
-import { Spinner } from "@superset/ui/spinner";
 import { toast } from "@superset/ui/sonner";
+import { Spinner } from "@superset/ui/spinner";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { IssuesKanbanBoard } from "../IssuesKanbanBoard";
 

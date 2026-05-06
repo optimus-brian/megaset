@@ -12,13 +12,14 @@ import { useLinkedIssue } from "renderer/hooks/useLinkedIssue";
 import { launchAgentSession } from "renderer/lib/agent-session-orchestrator";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useCreateWorkspace } from "renderer/react-query/workspaces";
-import { buildTaskAgentLaunchRequest } from "shared/utils/agent-launch-request";
+import { buildTaskAgentLaunchRequest } from "@superset/shared/agent-launch-request";
 import {
 	type AgentDefinitionId,
 	getEnabledAgentConfigs,
 	indexResolvedAgentConfigs,
-} from "shared/utils/agent-settings";
-import { sanitizeSegment } from "shared/utils/branch";
+	type ResolvedAgentConfig,
+} from "@superset/shared/agent-settings";
+import { sanitizeSegment } from "@superset/shared/workspace-launch";
 
 type WorkspaceMode = "main" | "worktree";
 type AgentChoice = AgentDefinitionId | "none" | "claude-sdk";
@@ -46,7 +47,7 @@ function buildClaudeSdkPrompt(
 		parts.push(`Labels: ${issue.labels.join(", ")}`);
 	}
 	parts.push("");
-	if (issue.body && issue.body.trim()) {
+	if (issue.body?.trim()) {
 		parts.push("## Description", issue.body.trim());
 		parts.push("");
 	}
@@ -114,7 +115,7 @@ export function IssueDetailSidebar({
 	const [branch, setBranch] = useState(defaultBranch);
 
 	const agentPresetsQuery = electronTrpc.settings.getAgentPresets.useQuery();
-	const agentPresets = agentPresetsQuery.data ?? [];
+	const agentPresets: ResolvedAgentConfig[] = agentPresetsQuery.data ?? [];
 	const enabledAgents = useMemo(
 		() => getEnabledAgentConfigs(agentPresets),
 		[agentPresets],
@@ -167,7 +168,7 @@ export function IssueDetailSidebar({
 		if (effectiveAgent === "none" || effectiveAgent === CLAUDE_SDK_AGENT_VALUE)
 			return undefined;
 		const bodyParts: string[] = [];
-		if (issue.body && issue.body.trim()) bodyParts.push(issue.body.trim());
+		if (issue.body?.trim()) bodyParts.push(issue.body.trim());
 		if (comments.length > 0) {
 			bodyParts.push("## Comments");
 			for (const c of comments) {
@@ -217,10 +218,10 @@ export function IssueDetailSidebar({
 				number: issue.number,
 				body: `Workspace **${workspaceName}** opened in Superset${
 					effectiveAgent !== "none" && effectiveAgent !== CLAUDE_SDK_AGENT_VALUE
-					? ` with agent \`${effectiveAgent}\``
-					: effectiveAgent === CLAUDE_SDK_AGENT_VALUE
-					? " with Claude SDK"
-					: ""
+						? ` with agent \`${effectiveAgent}\``
+						: effectiveAgent === CLAUDE_SDK_AGENT_VALUE
+							? " with Claude SDK"
+							: ""
 				}.`,
 			});
 			utils.gitProviders.listIssueCommentsForProject.invalidate({
@@ -242,7 +243,10 @@ export function IssueDetailSidebar({
 			});
 			utils.gitProviders.listIssuesForProject.invalidate({ projectId });
 		} catch (err) {
-			console.warn("[IssueDetailSidebar] Failed to set in-progress label:", err);
+			console.warn(
+				"[IssueDetailSidebar] Failed to set in-progress label:",
+				err,
+			);
 		}
 	};
 
@@ -254,13 +258,13 @@ export function IssueDetailSidebar({
 					await runAgent(result.workspace.id);
 				}
 				linkIssue(result.workspace.id, {
-				projectId,
-				issueNumber: issue.number,
-				issueTitle: issue.title,
-				issueUrl: issue.url,
-			});
-			await postWorkspaceComment(result.workspace.name);
-			await markIssueInProgress();
+					projectId,
+					issueNumber: issue.number,
+					issueTitle: issue.title,
+					issueUrl: issue.url,
+				});
+				await postWorkspaceComment(result.workspace.name);
+				await markIssueInProgress();
 				if (effectiveAgent === CLAUDE_SDK_AGENT_VALUE) {
 					openClaudeSdkTabWithPrompt(
 						result.workspace.id,

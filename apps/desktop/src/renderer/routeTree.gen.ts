@@ -8,620 +8,861 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthenticatedLayoutRouteImport } from './routes/_authenticated/layout'
-import { Route as PageRouteImport } from './routes/page'
-import { Route as SignInPageRouteImport } from './routes/sign-in/page'
-import { Route as CreateOrganizationPageRouteImport } from './routes/create-organization/page'
-import { Route as AuthenticatedSettingsLayoutRouteImport } from './routes/_authenticated/settings/layout'
-import { Route as AuthenticatedOnboardingLayoutRouteImport } from './routes/_authenticated/_onboarding/layout'
-import { Route as AuthenticatedDashboardLayoutRouteImport } from './routes/_authenticated/_dashboard/layout'
-import { Route as AuthenticatedSettingsPageRouteImport } from './routes/_authenticated/settings/page'
-import { Route as AuthenticatedDashboardV2WorkspaceLayoutRouteImport } from './routes/_authenticated/_dashboard/v2-workspace/layout'
-import { Route as AuthenticatedDashboardTasksLayoutRouteImport } from './routes/_authenticated/_dashboard/tasks/layout'
-import { Route as AuthenticatedDashboardReposLayoutRouteImport } from './routes/_authenticated/_dashboard/repos/layout'
-import { Route as AuthenticatedDashboardIssuesLayoutRouteImport } from './routes/_authenticated/_dashboard/issues/layout'
-import { Route as AuthenticatedSettingsTerminalPageRouteImport } from './routes/_authenticated/settings/terminal/page'
-import { Route as AuthenticatedSettingsSecurityPageRouteImport } from './routes/_authenticated/settings/security/page'
-import { Route as AuthenticatedSettingsRingtonesPageRouteImport } from './routes/_authenticated/settings/ringtones/page'
-import { Route as AuthenticatedSettingsProjectsPageRouteImport } from './routes/_authenticated/settings/projects/page'
-import { Route as AuthenticatedSettingsPresetsPageRouteImport } from './routes/_authenticated/settings/presets/page'
-import { Route as AuthenticatedSettingsPermissionsPageRouteImport } from './routes/_authenticated/settings/permissions/page'
-import { Route as AuthenticatedSettingsOrganizationPageRouteImport } from './routes/_authenticated/settings/organization/page'
-import { Route as AuthenticatedSettingsModelsPageRouteImport } from './routes/_authenticated/settings/models/page'
-import { Route as AuthenticatedSettingsKeyboardPageRouteImport } from './routes/_authenticated/settings/keyboard/page'
-import { Route as AuthenticatedSettingsIntegrationsPageRouteImport } from './routes/_authenticated/settings/integrations/page'
-import { Route as AuthenticatedSettingsGitPageRouteImport } from './routes/_authenticated/settings/git/page'
-import { Route as AuthenticatedSettingsBillingPageRouteImport } from './routes/_authenticated/settings/billing/page'
-import { Route as AuthenticatedSettingsBehaviorPageRouteImport } from './routes/_authenticated/settings/behavior/page'
-import { Route as AuthenticatedSettingsAppearancePageRouteImport } from './routes/_authenticated/settings/appearance/page'
-import { Route as AuthenticatedSettingsApiKeysPageRouteImport } from './routes/_authenticated/settings/api-keys/page'
-import { Route as AuthenticatedSettingsAgentsPageRouteImport } from './routes/_authenticated/settings/agents/page'
-import { Route as AuthenticatedSettingsAccountPageRouteImport } from './routes/_authenticated/settings/account/page'
-import { Route as AuthenticatedOnboardingWelcomePageRouteImport } from './routes/_authenticated/_onboarding/welcome/page'
-import { Route as AuthenticatedOnboardingNewProjectPageRouteImport } from './routes/_authenticated/_onboarding/new-project/page'
-import { Route as AuthenticatedDashboardWorkspacesPageRouteImport } from './routes/_authenticated/_dashboard/workspaces/page'
-import { Route as AuthenticatedDashboardWorkspacePageRouteImport } from './routes/_authenticated/_dashboard/workspace/page'
-import { Route as AuthenticatedDashboardV2WorkspacesPageRouteImport } from './routes/_authenticated/_dashboard/v2-workspaces/page'
-import { Route as AuthenticatedDashboardTasksPageRouteImport } from './routes/_authenticated/_dashboard/tasks/page'
-import { Route as AuthenticatedDashboardReposPageRouteImport } from './routes/_authenticated/_dashboard/repos/page'
-import { Route as AuthenticatedDashboardIssuesPageRouteImport } from './routes/_authenticated/_dashboard/issues/page'
-import { Route as AuthenticatedDashboardDashboardPageRouteImport } from './routes/_authenticated/_dashboard/dashboard/page'
-import { Route as AuthenticatedSettingsProjectProjectIdPageRouteImport } from './routes/_authenticated/settings/project/$projectId/page'
-import { Route as AuthenticatedSettingsBillingPlansPageRouteImport } from './routes/_authenticated/settings/billing/plans/page'
-import { Route as AuthenticatedDashboardWorkspaceWorkspaceIdPageRouteImport } from './routes/_authenticated/_dashboard/workspace/$workspaceId/page'
-import { Route as AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRouteImport } from './routes/_authenticated/_dashboard/v2-workspace/$workspaceId/page'
-import { Route as AuthenticatedDashboardTasksTaskIdPageRouteImport } from './routes/_authenticated/_dashboard/tasks/$taskId/page'
-import { Route as AuthenticatedDashboardProjectProjectIdPageRouteImport } from './routes/_authenticated/_dashboard/project/$projectId/page'
-import { Route as AuthenticatedDashboardPendingPendingIdPageRouteImport } from './routes/_authenticated/_dashboard/pending/$pendingId/page'
-import { Route as AuthenticatedSettingsProjectProjectIdGeneralPageRouteImport } from './routes/_authenticated/settings/project/$projectId/general/page'
-import { Route as AuthenticatedSettingsProjectProjectIdCloudPageRouteImport } from './routes/_authenticated/settings/project/$projectId/cloud/page'
-import { Route as AuthenticatedSettingsProjectProjectIdCloudSecretsPageRouteImport } from './routes/_authenticated/settings/project/$projectId/cloud/secrets/page'
+import { Route as rootRouteImport } from "./routes/__root"
+import { Route as AuthenticatedLayoutRouteImport } from "./routes/_authenticated/layout"
+import { Route as PageRouteImport } from "./routes/page"
+import { Route as SignInPageRouteImport } from "./routes/sign-in/page"
+import { Route as CreateOrganizationPageRouteImport } from "./routes/create-organization/page"
+import { Route as AuthenticatedSetupLayoutRouteImport } from "./routes/_authenticated/setup/layout"
+import { Route as AuthenticatedSettingsLayoutRouteImport } from "./routes/_authenticated/settings/layout"
+import { Route as AuthenticatedOnboardingLayoutRouteImport } from "./routes/_authenticated/_onboarding/layout"
+import { Route as AuthenticatedDashboardLayoutRouteImport } from "./routes/_authenticated/_dashboard/layout"
+import { Route as AuthenticatedSettingsPageRouteImport } from "./routes/_authenticated/settings/page"
+import { Route as AuthenticatedSettingsProjectsLayoutRouteImport } from "./routes/_authenticated/settings/projects/layout"
+import { Route as AuthenticatedSettingsHostsLayoutRouteImport } from "./routes/_authenticated/settings/hosts/layout"
+import { Route as AuthenticatedDashboardV2WorkspaceLayoutRouteImport } from "./routes/_authenticated/_dashboard/v2-workspace/layout"
+import { Route as AuthenticatedDashboardTasksLayoutRouteImport } from "./routes/_authenticated/_dashboard/tasks/layout"
+import { Route as AuthenticatedDashboardReposLayoutRouteImport } from "./routes/_authenticated/_dashboard/repos/layout"
+import { Route as AuthenticatedDashboardIssuesLayoutRouteImport } from "./routes/_authenticated/_dashboard/issues/layout"
+import { Route as AuthenticatedDashboardAutomationsLayoutRouteImport } from "./routes/_authenticated/_dashboard/automations/layout"
+import { Route as AuthenticatedSetupProvidersPageRouteImport } from "./routes/_authenticated/setup/providers/page"
+import { Route as AuthenticatedSetupProjectPageRouteImport } from "./routes/_authenticated/setup/project/page"
+import { Route as AuthenticatedSetupPermissionsPageRouteImport } from "./routes/_authenticated/setup/permissions/page"
+import { Route as AuthenticatedSetupGhCliPageRouteImport } from "./routes/_authenticated/setup/gh-cli/page"
+import { Route as AuthenticatedSetupAdoptWorktreesPageRouteImport } from "./routes/_authenticated/setup/adopt-worktrees/page"
+import { Route as AuthenticatedSettingsTerminalPageRouteImport } from "./routes/_authenticated/settings/terminal/page"
+import { Route as AuthenticatedSettingsSecurityPageRouteImport } from "./routes/_authenticated/settings/security/page"
+import { Route as AuthenticatedSettingsRingtonesPageRouteImport } from "./routes/_authenticated/settings/ringtones/page"
+import { Route as AuthenticatedSettingsProjectsPageRouteImport } from "./routes/_authenticated/settings/projects/page"
+import { Route as AuthenticatedSettingsPresetsPageRouteImport } from "./routes/_authenticated/settings/presets/page"
+import { Route as AuthenticatedSettingsPermissionsPageRouteImport } from "./routes/_authenticated/settings/permissions/page"
+import { Route as AuthenticatedSettingsOrganizationPageRouteImport } from "./routes/_authenticated/settings/organization/page"
+import { Route as AuthenticatedSettingsModelsPageRouteImport } from "./routes/_authenticated/settings/models/page"
+import { Route as AuthenticatedSettingsLinksPageRouteImport } from "./routes/_authenticated/settings/links/page"
+import { Route as AuthenticatedSettingsKeyboardPageRouteImport } from "./routes/_authenticated/settings/keyboard/page"
+import { Route as AuthenticatedSettingsIntegrationsPageRouteImport } from "./routes/_authenticated/settings/integrations/page"
+import { Route as AuthenticatedSettingsHostsPageRouteImport } from "./routes/_authenticated/settings/hosts/page"
+import { Route as AuthenticatedSettingsGitPageRouteImport } from "./routes/_authenticated/settings/git/page"
+import { Route as AuthenticatedSettingsExperimentalPageRouteImport } from "./routes/_authenticated/settings/experimental/page"
+import { Route as AuthenticatedSettingsBillingPageRouteImport } from "./routes/_authenticated/settings/billing/page"
+import { Route as AuthenticatedSettingsBehaviorPageRouteImport } from "./routes/_authenticated/settings/behavior/page"
+import { Route as AuthenticatedSettingsAppearancePageRouteImport } from "./routes/_authenticated/settings/appearance/page"
+import { Route as AuthenticatedSettingsApiKeysPageRouteImport } from "./routes/_authenticated/settings/api-keys/page"
+import { Route as AuthenticatedSettingsAgentsPageRouteImport } from "./routes/_authenticated/settings/agents/page"
+import { Route as AuthenticatedSettingsAccountPageRouteImport } from "./routes/_authenticated/settings/account/page"
+import { Route as AuthenticatedOnboardingWelcomePageRouteImport } from "./routes/_authenticated/_onboarding/welcome/page"
+import { Route as AuthenticatedOnboardingNewProjectPageRouteImport } from "./routes/_authenticated/_onboarding/new-project/page"
+import { Route as AuthenticatedDashboardWorkspacesPageRouteImport } from "./routes/_authenticated/_dashboard/workspaces/page"
+import { Route as AuthenticatedDashboardWorkspacePageRouteImport } from "./routes/_authenticated/_dashboard/workspace/page"
+import { Route as AuthenticatedDashboardV2WorkspacesPageRouteImport } from "./routes/_authenticated/_dashboard/v2-workspaces/page"
+import { Route as AuthenticatedDashboardTasksPageRouteImport } from "./routes/_authenticated/_dashboard/tasks/page"
+import { Route as AuthenticatedDashboardReposPageRouteImport } from "./routes/_authenticated/_dashboard/repos/page"
+import { Route as AuthenticatedDashboardIssuesPageRouteImport } from "./routes/_authenticated/_dashboard/issues/page"
+import { Route as AuthenticatedDashboardDashboardPageRouteImport } from "./routes/_authenticated/_dashboard/dashboard/page"
+import { Route as AuthenticatedDashboardAutomationsPageRouteImport } from "./routes/_authenticated/_dashboard/automations/page"
+import { Route as AuthenticatedSetupProvidersCodexPageRouteImport } from "./routes/_authenticated/setup/providers/codex/page"
+import { Route as AuthenticatedSetupProvidersClaudeCodePageRouteImport } from "./routes/_authenticated/setup/providers/claude-code/page"
+import { Route as AuthenticatedSettingsProjectsProjectIdPageRouteImport } from "./routes/_authenticated/settings/projects/$projectId/page"
+import { Route as AuthenticatedSettingsHostsHostIdPageRouteImport } from "./routes/_authenticated/settings/hosts/$hostId/page"
+import { Route as AuthenticatedSettingsBillingPlansPageRouteImport } from "./routes/_authenticated/settings/billing/plans/page"
+import { Route as AuthenticatedDashboardWorkspaceWorkspaceIdPageRouteImport } from "./routes/_authenticated/_dashboard/workspace/$workspaceId/page"
+import { Route as AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRouteImport } from "./routes/_authenticated/_dashboard/v2-workspace/$workspaceId/page"
+import { Route as AuthenticatedDashboardTasksTaskIdPageRouteImport } from "./routes/_authenticated/_dashboard/tasks/$taskId/page"
+import { Route as AuthenticatedDashboardProjectProjectIdPageRouteImport } from "./routes/_authenticated/_dashboard/project/$projectId/page"
+import { Route as AuthenticatedDashboardAutomationsAutomationIdPageRouteImport } from "./routes/_authenticated/_dashboard/automations/$automationId/page"
+import { Route as AuthenticatedSetupProvidersCodexCustomPageRouteImport } from "./routes/_authenticated/setup/providers/codex/custom/page"
+import { Route as AuthenticatedSetupProvidersCodexApiKeyPageRouteImport } from "./routes/_authenticated/setup/providers/codex/api-key/page"
+import { Route as AuthenticatedSetupProvidersClaudeCodeCustomPageRouteImport } from "./routes/_authenticated/setup/providers/claude-code/custom/page"
+import { Route as AuthenticatedSetupProvidersClaudeCodeApiKeyPageRouteImport } from "./routes/_authenticated/setup/providers/claude-code/api-key/page"
+import { Route as AuthenticatedSettingsProjectProjectIdCloudPageRouteImport } from "./routes/_authenticated/settings/project/$projectId/cloud/page"
+import { Route as AuthenticatedSettingsProjectProjectIdCloudSecretsPageRouteImport } from "./routes/_authenticated/settings/project/$projectId/cloud/secrets/page"
 
 const AuthenticatedLayoutRoute = AuthenticatedLayoutRouteImport.update({
-  id: '/_authenticated',
+  id: "/_authenticated",
   getParentRoute: () => rootRouteImport,
 } as any)
 const PageRoute = PageRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignInPageRoute = SignInPageRouteImport.update({
-  id: '/sign-in/',
-  path: '/sign-in/',
+  id: "/sign-in/",
+  path: "/sign-in/",
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreateOrganizationPageRoute = CreateOrganizationPageRouteImport.update({
-  id: '/create-organization/',
-  path: '/create-organization/',
+  id: "/create-organization/",
+  path: "/create-organization/",
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSetupLayoutRoute =
+  AuthenticatedSetupLayoutRouteImport.update({
+    id: "/setup",
+    path: "/setup",
+    getParentRoute: () => AuthenticatedLayoutRoute,
+  } as any)
 const AuthenticatedSettingsLayoutRoute =
   AuthenticatedSettingsLayoutRouteImport.update({
-    id: '/settings',
-    path: '/settings',
+    id: "/settings",
+    path: "/settings",
     getParentRoute: () => AuthenticatedLayoutRoute,
   } as any)
 const AuthenticatedOnboardingLayoutRoute =
   AuthenticatedOnboardingLayoutRouteImport.update({
-    id: '/_onboarding',
+    id: "/_onboarding",
     getParentRoute: () => AuthenticatedLayoutRoute,
   } as any)
 const AuthenticatedDashboardLayoutRoute =
   AuthenticatedDashboardLayoutRouteImport.update({
-    id: '/_dashboard',
+    id: "/_dashboard",
     getParentRoute: () => AuthenticatedLayoutRoute,
   } as any)
 const AuthenticatedSettingsPageRoute =
   AuthenticatedSettingsPageRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
+    getParentRoute: () => AuthenticatedSettingsLayoutRoute,
+  } as any)
+const AuthenticatedSettingsProjectsLayoutRoute =
+  AuthenticatedSettingsProjectsLayoutRouteImport.update({
+    id: "/projects",
+    path: "/projects",
+    getParentRoute: () => AuthenticatedSettingsLayoutRoute,
+  } as any)
+const AuthenticatedSettingsHostsLayoutRoute =
+  AuthenticatedSettingsHostsLayoutRouteImport.update({
+    id: "/hosts",
+    path: "/hosts",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedDashboardV2WorkspaceLayoutRoute =
   AuthenticatedDashboardV2WorkspaceLayoutRouteImport.update({
-    id: '/v2-workspace',
-    path: '/v2-workspace',
+    id: "/v2-workspace",
+    path: "/v2-workspace",
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
   } as any)
 const AuthenticatedDashboardTasksLayoutRoute =
   AuthenticatedDashboardTasksLayoutRouteImport.update({
-    id: '/tasks',
-    path: '/tasks',
+    id: "/tasks",
+    path: "/tasks",
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
   } as any)
 const AuthenticatedDashboardReposLayoutRoute =
   AuthenticatedDashboardReposLayoutRouteImport.update({
-    id: '/repos',
-    path: '/repos',
+    id: "/repos",
+    path: "/repos",
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
   } as any)
 const AuthenticatedDashboardIssuesLayoutRoute =
   AuthenticatedDashboardIssuesLayoutRouteImport.update({
-    id: '/issues',
-    path: '/issues',
+    id: "/issues",
+    path: "/issues",
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
+  } as any)
+const AuthenticatedDashboardAutomationsLayoutRoute =
+  AuthenticatedDashboardAutomationsLayoutRouteImport.update({
+    id: "/automations",
+    path: "/automations",
+    getParentRoute: () => AuthenticatedDashboardLayoutRoute,
+  } as any)
+const AuthenticatedSetupProvidersPageRoute =
+  AuthenticatedSetupProvidersPageRouteImport.update({
+    id: "/providers/",
+    path: "/providers/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
+  } as any)
+const AuthenticatedSetupProjectPageRoute =
+  AuthenticatedSetupProjectPageRouteImport.update({
+    id: "/project/",
+    path: "/project/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
+  } as any)
+const AuthenticatedSetupPermissionsPageRoute =
+  AuthenticatedSetupPermissionsPageRouteImport.update({
+    id: "/permissions/",
+    path: "/permissions/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
+  } as any)
+const AuthenticatedSetupGhCliPageRoute =
+  AuthenticatedSetupGhCliPageRouteImport.update({
+    id: "/gh-cli/",
+    path: "/gh-cli/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
+  } as any)
+const AuthenticatedSetupAdoptWorktreesPageRoute =
+  AuthenticatedSetupAdoptWorktreesPageRouteImport.update({
+    id: "/adopt-worktrees/",
+    path: "/adopt-worktrees/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
   } as any)
 const AuthenticatedSettingsTerminalPageRoute =
   AuthenticatedSettingsTerminalPageRouteImport.update({
-    id: '/terminal/',
-    path: '/terminal/',
+    id: "/terminal/",
+    path: "/terminal/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsSecurityPageRoute =
   AuthenticatedSettingsSecurityPageRouteImport.update({
-    id: '/security/',
-    path: '/security/',
+    id: "/security/",
+    path: "/security/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsRingtonesPageRoute =
   AuthenticatedSettingsRingtonesPageRouteImport.update({
-    id: '/ringtones/',
-    path: '/ringtones/',
+    id: "/ringtones/",
+    path: "/ringtones/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsProjectsPageRoute =
   AuthenticatedSettingsProjectsPageRouteImport.update({
-    id: '/projects/',
-    path: '/projects/',
-    getParentRoute: () => AuthenticatedSettingsLayoutRoute,
+    id: "/",
+    path: "/",
+    getParentRoute: () => AuthenticatedSettingsProjectsLayoutRoute,
   } as any)
 const AuthenticatedSettingsPresetsPageRoute =
   AuthenticatedSettingsPresetsPageRouteImport.update({
-    id: '/presets/',
-    path: '/presets/',
+    id: "/presets/",
+    path: "/presets/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsPermissionsPageRoute =
   AuthenticatedSettingsPermissionsPageRouteImport.update({
-    id: '/permissions/',
-    path: '/permissions/',
+    id: "/permissions/",
+    path: "/permissions/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsOrganizationPageRoute =
   AuthenticatedSettingsOrganizationPageRouteImport.update({
-    id: '/organization/',
-    path: '/organization/',
+    id: "/organization/",
+    path: "/organization/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsModelsPageRoute =
   AuthenticatedSettingsModelsPageRouteImport.update({
-    id: '/models/',
-    path: '/models/',
+    id: "/models/",
+    path: "/models/",
+    getParentRoute: () => AuthenticatedSettingsLayoutRoute,
+  } as any)
+const AuthenticatedSettingsLinksPageRoute =
+  AuthenticatedSettingsLinksPageRouteImport.update({
+    id: "/links/",
+    path: "/links/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsKeyboardPageRoute =
   AuthenticatedSettingsKeyboardPageRouteImport.update({
-    id: '/keyboard/',
-    path: '/keyboard/',
+    id: "/keyboard/",
+    path: "/keyboard/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsIntegrationsPageRoute =
   AuthenticatedSettingsIntegrationsPageRouteImport.update({
-    id: '/integrations/',
-    path: '/integrations/',
+    id: "/integrations/",
+    path: "/integrations/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
+  } as any)
+const AuthenticatedSettingsHostsPageRoute =
+  AuthenticatedSettingsHostsPageRouteImport.update({
+    id: "/",
+    path: "/",
+    getParentRoute: () => AuthenticatedSettingsHostsLayoutRoute,
   } as any)
 const AuthenticatedSettingsGitPageRoute =
   AuthenticatedSettingsGitPageRouteImport.update({
-    id: '/git/',
-    path: '/git/',
+    id: "/git/",
+    path: "/git/",
+    getParentRoute: () => AuthenticatedSettingsLayoutRoute,
+  } as any)
+const AuthenticatedSettingsExperimentalPageRoute =
+  AuthenticatedSettingsExperimentalPageRouteImport.update({
+    id: "/experimental/",
+    path: "/experimental/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsBillingPageRoute =
   AuthenticatedSettingsBillingPageRouteImport.update({
-    id: '/billing/',
-    path: '/billing/',
+    id: "/billing/",
+    path: "/billing/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsBehaviorPageRoute =
   AuthenticatedSettingsBehaviorPageRouteImport.update({
-    id: '/behavior/',
-    path: '/behavior/',
+    id: "/behavior/",
+    path: "/behavior/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsAppearancePageRoute =
   AuthenticatedSettingsAppearancePageRouteImport.update({
-    id: '/appearance/',
-    path: '/appearance/',
+    id: "/appearance/",
+    path: "/appearance/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsApiKeysPageRoute =
   AuthenticatedSettingsApiKeysPageRouteImport.update({
-    id: '/api-keys/',
-    path: '/api-keys/',
+    id: "/api-keys/",
+    path: "/api-keys/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsAgentsPageRoute =
   AuthenticatedSettingsAgentsPageRouteImport.update({
-    id: '/agents/',
-    path: '/agents/',
+    id: "/agents/",
+    path: "/agents/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsAccountPageRoute =
   AuthenticatedSettingsAccountPageRouteImport.update({
-    id: '/account/',
-    path: '/account/',
+    id: "/account/",
+    path: "/account/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedOnboardingWelcomePageRoute =
   AuthenticatedOnboardingWelcomePageRouteImport.update({
-    id: '/welcome/',
-    path: '/welcome/',
+    id: "/welcome/",
+    path: "/welcome/",
     getParentRoute: () => AuthenticatedOnboardingLayoutRoute,
   } as any)
 const AuthenticatedOnboardingNewProjectPageRoute =
   AuthenticatedOnboardingNewProjectPageRouteImport.update({
-    id: '/new-project/',
-    path: '/new-project/',
+    id: "/new-project/",
+    path: "/new-project/",
     getParentRoute: () => AuthenticatedOnboardingLayoutRoute,
   } as any)
 const AuthenticatedDashboardWorkspacesPageRoute =
   AuthenticatedDashboardWorkspacesPageRouteImport.update({
-    id: '/workspaces/',
-    path: '/workspaces/',
+    id: "/workspaces/",
+    path: "/workspaces/",
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
   } as any)
 const AuthenticatedDashboardWorkspacePageRoute =
   AuthenticatedDashboardWorkspacePageRouteImport.update({
-    id: '/workspace/',
-    path: '/workspace/',
+    id: "/workspace/",
+    path: "/workspace/",
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
   } as any)
 const AuthenticatedDashboardV2WorkspacesPageRoute =
   AuthenticatedDashboardV2WorkspacesPageRouteImport.update({
-    id: '/v2-workspaces/',
-    path: '/v2-workspaces/',
+    id: "/v2-workspaces/",
+    path: "/v2-workspaces/",
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
   } as any)
 const AuthenticatedDashboardTasksPageRoute =
   AuthenticatedDashboardTasksPageRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => AuthenticatedDashboardTasksLayoutRoute,
   } as any)
 const AuthenticatedDashboardReposPageRoute =
   AuthenticatedDashboardReposPageRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => AuthenticatedDashboardReposLayoutRoute,
   } as any)
 const AuthenticatedDashboardIssuesPageRoute =
   AuthenticatedDashboardIssuesPageRouteImport.update({
-    id: '/',
-    path: '/',
+    id: "/",
+    path: "/",
     getParentRoute: () => AuthenticatedDashboardIssuesLayoutRoute,
   } as any)
 const AuthenticatedDashboardDashboardPageRoute =
   AuthenticatedDashboardDashboardPageRouteImport.update({
-    id: '/dashboard/',
-    path: '/dashboard/',
+    id: "/dashboard/",
+    path: "/dashboard/",
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
   } as any)
-const AuthenticatedSettingsProjectProjectIdPageRoute =
-  AuthenticatedSettingsProjectProjectIdPageRouteImport.update({
-    id: '/project/$projectId/',
-    path: '/project/$projectId/',
-    getParentRoute: () => AuthenticatedSettingsLayoutRoute,
+const AuthenticatedDashboardAutomationsPageRoute =
+  AuthenticatedDashboardAutomationsPageRouteImport.update({
+    id: "/",
+    path: "/",
+    getParentRoute: () => AuthenticatedDashboardAutomationsLayoutRoute,
+  } as any)
+const AuthenticatedSetupProvidersCodexPageRoute =
+  AuthenticatedSetupProvidersCodexPageRouteImport.update({
+    id: "/providers/codex/",
+    path: "/providers/codex/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
+  } as any)
+const AuthenticatedSetupProvidersClaudeCodePageRoute =
+  AuthenticatedSetupProvidersClaudeCodePageRouteImport.update({
+    id: "/providers/claude-code/",
+    path: "/providers/claude-code/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
+  } as any)
+const AuthenticatedSettingsProjectsProjectIdPageRoute =
+  AuthenticatedSettingsProjectsProjectIdPageRouteImport.update({
+    id: "/$projectId/",
+    path: "/$projectId/",
+    getParentRoute: () => AuthenticatedSettingsProjectsLayoutRoute,
+  } as any)
+const AuthenticatedSettingsHostsHostIdPageRoute =
+  AuthenticatedSettingsHostsHostIdPageRouteImport.update({
+    id: "/$hostId/",
+    path: "/$hostId/",
+    getParentRoute: () => AuthenticatedSettingsHostsLayoutRoute,
   } as any)
 const AuthenticatedSettingsBillingPlansPageRoute =
   AuthenticatedSettingsBillingPlansPageRouteImport.update({
-    id: '/billing/plans/',
-    path: '/billing/plans/',
+    id: "/billing/plans/",
+    path: "/billing/plans/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedDashboardWorkspaceWorkspaceIdPageRoute =
   AuthenticatedDashboardWorkspaceWorkspaceIdPageRouteImport.update({
-    id: '/workspace/$workspaceId/',
-    path: '/workspace/$workspaceId/',
+    id: "/workspace/$workspaceId/",
+    path: "/workspace/$workspaceId/",
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
   } as any)
 const AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRoute =
   AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRouteImport.update({
-    id: '/$workspaceId/',
-    path: '/$workspaceId/',
+    id: "/$workspaceId/",
+    path: "/$workspaceId/",
     getParentRoute: () => AuthenticatedDashboardV2WorkspaceLayoutRoute,
   } as any)
 const AuthenticatedDashboardTasksTaskIdPageRoute =
   AuthenticatedDashboardTasksTaskIdPageRouteImport.update({
-    id: '/$taskId/',
-    path: '/$taskId/',
+    id: "/$taskId/",
+    path: "/$taskId/",
     getParentRoute: () => AuthenticatedDashboardTasksLayoutRoute,
   } as any)
 const AuthenticatedDashboardProjectProjectIdPageRoute =
   AuthenticatedDashboardProjectProjectIdPageRouteImport.update({
-    id: '/project/$projectId/',
-    path: '/project/$projectId/',
+    id: "/project/$projectId/",
+    path: "/project/$projectId/",
     getParentRoute: () => AuthenticatedDashboardLayoutRoute,
   } as any)
-const AuthenticatedDashboardPendingPendingIdPageRoute =
-  AuthenticatedDashboardPendingPendingIdPageRouteImport.update({
-    id: '/pending/$pendingId/',
-    path: '/pending/$pendingId/',
-    getParentRoute: () => AuthenticatedDashboardLayoutRoute,
+const AuthenticatedDashboardAutomationsAutomationIdPageRoute =
+  AuthenticatedDashboardAutomationsAutomationIdPageRouteImport.update({
+    id: "/$automationId/",
+    path: "/$automationId/",
+    getParentRoute: () => AuthenticatedDashboardAutomationsLayoutRoute,
   } as any)
-const AuthenticatedSettingsProjectProjectIdGeneralPageRoute =
-  AuthenticatedSettingsProjectProjectIdGeneralPageRouteImport.update({
-    id: '/project/$projectId/general/',
-    path: '/project/$projectId/general/',
-    getParentRoute: () => AuthenticatedSettingsLayoutRoute,
+const AuthenticatedSetupProvidersCodexCustomPageRoute =
+  AuthenticatedSetupProvidersCodexCustomPageRouteImport.update({
+    id: "/providers/codex/custom/",
+    path: "/providers/codex/custom/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
+  } as any)
+const AuthenticatedSetupProvidersCodexApiKeyPageRoute =
+  AuthenticatedSetupProvidersCodexApiKeyPageRouteImport.update({
+    id: "/providers/codex/api-key/",
+    path: "/providers/codex/api-key/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
+  } as any)
+const AuthenticatedSetupProvidersClaudeCodeCustomPageRoute =
+  AuthenticatedSetupProvidersClaudeCodeCustomPageRouteImport.update({
+    id: "/providers/claude-code/custom/",
+    path: "/providers/claude-code/custom/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
+  } as any)
+const AuthenticatedSetupProvidersClaudeCodeApiKeyPageRoute =
+  AuthenticatedSetupProvidersClaudeCodeApiKeyPageRouteImport.update({
+    id: "/providers/claude-code/api-key/",
+    path: "/providers/claude-code/api-key/",
+    getParentRoute: () => AuthenticatedSetupLayoutRoute,
   } as any)
 const AuthenticatedSettingsProjectProjectIdCloudPageRoute =
   AuthenticatedSettingsProjectProjectIdCloudPageRouteImport.update({
-    id: '/project/$projectId/cloud/',
-    path: '/project/$projectId/cloud/',
+    id: "/project/$projectId/cloud/",
+    path: "/project/$projectId/cloud/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 const AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute =
   AuthenticatedSettingsProjectProjectIdCloudSecretsPageRouteImport.update({
-    id: '/project/$projectId/cloud/secrets/',
-    path: '/project/$projectId/cloud/secrets/',
+    id: "/project/$projectId/cloud/secrets/",
+    path: "/project/$projectId/cloud/secrets/",
     getParentRoute: () => AuthenticatedSettingsLayoutRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof PageRoute
-  '/settings': typeof AuthenticatedSettingsLayoutRouteWithChildren
-  '/create-organization/': typeof CreateOrganizationPageRoute
-  '/sign-in/': typeof SignInPageRoute
-  '/issues': typeof AuthenticatedDashboardIssuesLayoutRouteWithChildren
-  '/repos': typeof AuthenticatedDashboardReposLayoutRouteWithChildren
-  '/tasks': typeof AuthenticatedDashboardTasksLayoutRouteWithChildren
-  '/v2-workspace': typeof AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren
-  '/settings/': typeof AuthenticatedSettingsPageRoute
-  '/dashboard/': typeof AuthenticatedDashboardDashboardPageRoute
-  '/issues/': typeof AuthenticatedDashboardIssuesPageRoute
-  '/repos/': typeof AuthenticatedDashboardReposPageRoute
-  '/tasks/': typeof AuthenticatedDashboardTasksPageRoute
-  '/v2-workspaces/': typeof AuthenticatedDashboardV2WorkspacesPageRoute
-  '/workspace/': typeof AuthenticatedDashboardWorkspacePageRoute
-  '/workspaces/': typeof AuthenticatedDashboardWorkspacesPageRoute
-  '/new-project/': typeof AuthenticatedOnboardingNewProjectPageRoute
-  '/welcome/': typeof AuthenticatedOnboardingWelcomePageRoute
-  '/settings/account/': typeof AuthenticatedSettingsAccountPageRoute
-  '/settings/agents/': typeof AuthenticatedSettingsAgentsPageRoute
-  '/settings/api-keys/': typeof AuthenticatedSettingsApiKeysPageRoute
-  '/settings/appearance/': typeof AuthenticatedSettingsAppearancePageRoute
-  '/settings/behavior/': typeof AuthenticatedSettingsBehaviorPageRoute
-  '/settings/billing/': typeof AuthenticatedSettingsBillingPageRoute
-  '/settings/git/': typeof AuthenticatedSettingsGitPageRoute
-  '/settings/integrations/': typeof AuthenticatedSettingsIntegrationsPageRoute
-  '/settings/keyboard/': typeof AuthenticatedSettingsKeyboardPageRoute
-  '/settings/models/': typeof AuthenticatedSettingsModelsPageRoute
-  '/settings/organization/': typeof AuthenticatedSettingsOrganizationPageRoute
-  '/settings/permissions/': typeof AuthenticatedSettingsPermissionsPageRoute
-  '/settings/presets/': typeof AuthenticatedSettingsPresetsPageRoute
-  '/settings/projects/': typeof AuthenticatedSettingsProjectsPageRoute
-  '/settings/ringtones/': typeof AuthenticatedSettingsRingtonesPageRoute
-  '/settings/security/': typeof AuthenticatedSettingsSecurityPageRoute
-  '/settings/terminal/': typeof AuthenticatedSettingsTerminalPageRoute
-  '/pending/$pendingId/': typeof AuthenticatedDashboardPendingPendingIdPageRoute
-  '/project/$projectId/': typeof AuthenticatedDashboardProjectProjectIdPageRoute
-  '/tasks/$taskId/': typeof AuthenticatedDashboardTasksTaskIdPageRoute
-  '/v2-workspace/$workspaceId/': typeof AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRoute
-  '/workspace/$workspaceId/': typeof AuthenticatedDashboardWorkspaceWorkspaceIdPageRoute
-  '/settings/billing/plans/': typeof AuthenticatedSettingsBillingPlansPageRoute
-  '/settings/project/$projectId/': typeof AuthenticatedSettingsProjectProjectIdPageRoute
-  '/settings/project/$projectId/cloud/': typeof AuthenticatedSettingsProjectProjectIdCloudPageRoute
-  '/settings/project/$projectId/general/': typeof AuthenticatedSettingsProjectProjectIdGeneralPageRoute
-  '/settings/project/$projectId/cloud/secrets/': typeof AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute
+  "/": typeof PageRoute
+  "/settings": typeof AuthenticatedSettingsLayoutRouteWithChildren
+  "/setup": typeof AuthenticatedSetupLayoutRouteWithChildren
+  "/create-organization/": typeof CreateOrganizationPageRoute
+  "/sign-in/": typeof SignInPageRoute
+  "/automations": typeof AuthenticatedDashboardAutomationsLayoutRouteWithChildren
+  "/issues": typeof AuthenticatedDashboardIssuesLayoutRouteWithChildren
+  "/repos": typeof AuthenticatedDashboardReposLayoutRouteWithChildren
+  "/tasks": typeof AuthenticatedDashboardTasksLayoutRouteWithChildren
+  "/v2-workspace": typeof AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren
+  "/settings/hosts": typeof AuthenticatedSettingsHostsLayoutRouteWithChildren
+  "/settings/projects": typeof AuthenticatedSettingsProjectsLayoutRouteWithChildren
+  "/settings/": typeof AuthenticatedSettingsPageRoute
+  "/automations/": typeof AuthenticatedDashboardAutomationsPageRoute
+  "/dashboard/": typeof AuthenticatedDashboardDashboardPageRoute
+  "/issues/": typeof AuthenticatedDashboardIssuesPageRoute
+  "/repos/": typeof AuthenticatedDashboardReposPageRoute
+  "/tasks/": typeof AuthenticatedDashboardTasksPageRoute
+  "/v2-workspaces/": typeof AuthenticatedDashboardV2WorkspacesPageRoute
+  "/workspace/": typeof AuthenticatedDashboardWorkspacePageRoute
+  "/workspaces/": typeof AuthenticatedDashboardWorkspacesPageRoute
+  "/new-project/": typeof AuthenticatedOnboardingNewProjectPageRoute
+  "/welcome/": typeof AuthenticatedOnboardingWelcomePageRoute
+  "/settings/account/": typeof AuthenticatedSettingsAccountPageRoute
+  "/settings/agents/": typeof AuthenticatedSettingsAgentsPageRoute
+  "/settings/api-keys/": typeof AuthenticatedSettingsApiKeysPageRoute
+  "/settings/appearance/": typeof AuthenticatedSettingsAppearancePageRoute
+  "/settings/behavior/": typeof AuthenticatedSettingsBehaviorPageRoute
+  "/settings/billing/": typeof AuthenticatedSettingsBillingPageRoute
+  "/settings/experimental/": typeof AuthenticatedSettingsExperimentalPageRoute
+  "/settings/git/": typeof AuthenticatedSettingsGitPageRoute
+  "/settings/hosts/": typeof AuthenticatedSettingsHostsPageRoute
+  "/settings/integrations/": typeof AuthenticatedSettingsIntegrationsPageRoute
+  "/settings/keyboard/": typeof AuthenticatedSettingsKeyboardPageRoute
+  "/settings/links/": typeof AuthenticatedSettingsLinksPageRoute
+  "/settings/models/": typeof AuthenticatedSettingsModelsPageRoute
+  "/settings/organization/": typeof AuthenticatedSettingsOrganizationPageRoute
+  "/settings/permissions/": typeof AuthenticatedSettingsPermissionsPageRoute
+  "/settings/presets/": typeof AuthenticatedSettingsPresetsPageRoute
+  "/settings/projects/": typeof AuthenticatedSettingsProjectsPageRoute
+  "/settings/ringtones/": typeof AuthenticatedSettingsRingtonesPageRoute
+  "/settings/security/": typeof AuthenticatedSettingsSecurityPageRoute
+  "/settings/terminal/": typeof AuthenticatedSettingsTerminalPageRoute
+  "/setup/adopt-worktrees/": typeof AuthenticatedSetupAdoptWorktreesPageRoute
+  "/setup/gh-cli/": typeof AuthenticatedSetupGhCliPageRoute
+  "/setup/permissions/": typeof AuthenticatedSetupPermissionsPageRoute
+  "/setup/project/": typeof AuthenticatedSetupProjectPageRoute
+  "/setup/providers/": typeof AuthenticatedSetupProvidersPageRoute
+  "/automations/$automationId/": typeof AuthenticatedDashboardAutomationsAutomationIdPageRoute
+  "/project/$projectId/": typeof AuthenticatedDashboardProjectProjectIdPageRoute
+  "/tasks/$taskId/": typeof AuthenticatedDashboardTasksTaskIdPageRoute
+  "/v2-workspace/$workspaceId/": typeof AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRoute
+  "/workspace/$workspaceId/": typeof AuthenticatedDashboardWorkspaceWorkspaceIdPageRoute
+  "/settings/billing/plans/": typeof AuthenticatedSettingsBillingPlansPageRoute
+  "/settings/hosts/$hostId/": typeof AuthenticatedSettingsHostsHostIdPageRoute
+  "/settings/projects/$projectId/": typeof AuthenticatedSettingsProjectsProjectIdPageRoute
+  "/setup/providers/claude-code/": typeof AuthenticatedSetupProvidersClaudeCodePageRoute
+  "/setup/providers/codex/": typeof AuthenticatedSetupProvidersCodexPageRoute
+  "/settings/project/$projectId/cloud/": typeof AuthenticatedSettingsProjectProjectIdCloudPageRoute
+  "/setup/providers/claude-code/api-key/": typeof AuthenticatedSetupProvidersClaudeCodeApiKeyPageRoute
+  "/setup/providers/claude-code/custom/": typeof AuthenticatedSetupProvidersClaudeCodeCustomPageRoute
+  "/setup/providers/codex/api-key/": typeof AuthenticatedSetupProvidersCodexApiKeyPageRoute
+  "/setup/providers/codex/custom/": typeof AuthenticatedSetupProvidersCodexCustomPageRoute
+  "/settings/project/$projectId/cloud/secrets/": typeof AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof PageRoute
-  '/create-organization': typeof CreateOrganizationPageRoute
-  '/sign-in': typeof SignInPageRoute
-  '/v2-workspace': typeof AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren
-  '/settings': typeof AuthenticatedSettingsPageRoute
-  '/dashboard': typeof AuthenticatedDashboardDashboardPageRoute
-  '/issues': typeof AuthenticatedDashboardIssuesPageRoute
-  '/repos': typeof AuthenticatedDashboardReposPageRoute
-  '/tasks': typeof AuthenticatedDashboardTasksPageRoute
-  '/v2-workspaces': typeof AuthenticatedDashboardV2WorkspacesPageRoute
-  '/workspace': typeof AuthenticatedDashboardWorkspacePageRoute
-  '/workspaces': typeof AuthenticatedDashboardWorkspacesPageRoute
-  '/new-project': typeof AuthenticatedOnboardingNewProjectPageRoute
-  '/welcome': typeof AuthenticatedOnboardingWelcomePageRoute
-  '/settings/account': typeof AuthenticatedSettingsAccountPageRoute
-  '/settings/agents': typeof AuthenticatedSettingsAgentsPageRoute
-  '/settings/api-keys': typeof AuthenticatedSettingsApiKeysPageRoute
-  '/settings/appearance': typeof AuthenticatedSettingsAppearancePageRoute
-  '/settings/behavior': typeof AuthenticatedSettingsBehaviorPageRoute
-  '/settings/billing': typeof AuthenticatedSettingsBillingPageRoute
-  '/settings/git': typeof AuthenticatedSettingsGitPageRoute
-  '/settings/integrations': typeof AuthenticatedSettingsIntegrationsPageRoute
-  '/settings/keyboard': typeof AuthenticatedSettingsKeyboardPageRoute
-  '/settings/models': typeof AuthenticatedSettingsModelsPageRoute
-  '/settings/organization': typeof AuthenticatedSettingsOrganizationPageRoute
-  '/settings/permissions': typeof AuthenticatedSettingsPermissionsPageRoute
-  '/settings/presets': typeof AuthenticatedSettingsPresetsPageRoute
-  '/settings/projects': typeof AuthenticatedSettingsProjectsPageRoute
-  '/settings/ringtones': typeof AuthenticatedSettingsRingtonesPageRoute
-  '/settings/security': typeof AuthenticatedSettingsSecurityPageRoute
-  '/settings/terminal': typeof AuthenticatedSettingsTerminalPageRoute
-  '/pending/$pendingId': typeof AuthenticatedDashboardPendingPendingIdPageRoute
-  '/project/$projectId': typeof AuthenticatedDashboardProjectProjectIdPageRoute
-  '/tasks/$taskId': typeof AuthenticatedDashboardTasksTaskIdPageRoute
-  '/v2-workspace/$workspaceId': typeof AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRoute
-  '/workspace/$workspaceId': typeof AuthenticatedDashboardWorkspaceWorkspaceIdPageRoute
-  '/settings/billing/plans': typeof AuthenticatedSettingsBillingPlansPageRoute
-  '/settings/project/$projectId': typeof AuthenticatedSettingsProjectProjectIdPageRoute
-  '/settings/project/$projectId/cloud': typeof AuthenticatedSettingsProjectProjectIdCloudPageRoute
-  '/settings/project/$projectId/general': typeof AuthenticatedSettingsProjectProjectIdGeneralPageRoute
-  '/settings/project/$projectId/cloud/secrets': typeof AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute
+  "/": typeof PageRoute
+  "/setup": typeof AuthenticatedSetupLayoutRouteWithChildren
+  "/create-organization": typeof CreateOrganizationPageRoute
+  "/sign-in": typeof SignInPageRoute
+  "/v2-workspace": typeof AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren
+  "/settings": typeof AuthenticatedSettingsPageRoute
+  "/automations": typeof AuthenticatedDashboardAutomationsPageRoute
+  "/dashboard": typeof AuthenticatedDashboardDashboardPageRoute
+  "/issues": typeof AuthenticatedDashboardIssuesPageRoute
+  "/repos": typeof AuthenticatedDashboardReposPageRoute
+  "/tasks": typeof AuthenticatedDashboardTasksPageRoute
+  "/v2-workspaces": typeof AuthenticatedDashboardV2WorkspacesPageRoute
+  "/workspace": typeof AuthenticatedDashboardWorkspacePageRoute
+  "/workspaces": typeof AuthenticatedDashboardWorkspacesPageRoute
+  "/new-project": typeof AuthenticatedOnboardingNewProjectPageRoute
+  "/welcome": typeof AuthenticatedOnboardingWelcomePageRoute
+  "/settings/account": typeof AuthenticatedSettingsAccountPageRoute
+  "/settings/agents": typeof AuthenticatedSettingsAgentsPageRoute
+  "/settings/api-keys": typeof AuthenticatedSettingsApiKeysPageRoute
+  "/settings/appearance": typeof AuthenticatedSettingsAppearancePageRoute
+  "/settings/behavior": typeof AuthenticatedSettingsBehaviorPageRoute
+  "/settings/billing": typeof AuthenticatedSettingsBillingPageRoute
+  "/settings/experimental": typeof AuthenticatedSettingsExperimentalPageRoute
+  "/settings/git": typeof AuthenticatedSettingsGitPageRoute
+  "/settings/hosts": typeof AuthenticatedSettingsHostsPageRoute
+  "/settings/integrations": typeof AuthenticatedSettingsIntegrationsPageRoute
+  "/settings/keyboard": typeof AuthenticatedSettingsKeyboardPageRoute
+  "/settings/links": typeof AuthenticatedSettingsLinksPageRoute
+  "/settings/models": typeof AuthenticatedSettingsModelsPageRoute
+  "/settings/organization": typeof AuthenticatedSettingsOrganizationPageRoute
+  "/settings/permissions": typeof AuthenticatedSettingsPermissionsPageRoute
+  "/settings/presets": typeof AuthenticatedSettingsPresetsPageRoute
+  "/settings/projects": typeof AuthenticatedSettingsProjectsPageRoute
+  "/settings/ringtones": typeof AuthenticatedSettingsRingtonesPageRoute
+  "/settings/security": typeof AuthenticatedSettingsSecurityPageRoute
+  "/settings/terminal": typeof AuthenticatedSettingsTerminalPageRoute
+  "/setup/adopt-worktrees": typeof AuthenticatedSetupAdoptWorktreesPageRoute
+  "/setup/gh-cli": typeof AuthenticatedSetupGhCliPageRoute
+  "/setup/permissions": typeof AuthenticatedSetupPermissionsPageRoute
+  "/setup/project": typeof AuthenticatedSetupProjectPageRoute
+  "/setup/providers": typeof AuthenticatedSetupProvidersPageRoute
+  "/automations/$automationId": typeof AuthenticatedDashboardAutomationsAutomationIdPageRoute
+  "/project/$projectId": typeof AuthenticatedDashboardProjectProjectIdPageRoute
+  "/tasks/$taskId": typeof AuthenticatedDashboardTasksTaskIdPageRoute
+  "/v2-workspace/$workspaceId": typeof AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRoute
+  "/workspace/$workspaceId": typeof AuthenticatedDashboardWorkspaceWorkspaceIdPageRoute
+  "/settings/billing/plans": typeof AuthenticatedSettingsBillingPlansPageRoute
+  "/settings/hosts/$hostId": typeof AuthenticatedSettingsHostsHostIdPageRoute
+  "/settings/projects/$projectId": typeof AuthenticatedSettingsProjectsProjectIdPageRoute
+  "/setup/providers/claude-code": typeof AuthenticatedSetupProvidersClaudeCodePageRoute
+  "/setup/providers/codex": typeof AuthenticatedSetupProvidersCodexPageRoute
+  "/settings/project/$projectId/cloud": typeof AuthenticatedSettingsProjectProjectIdCloudPageRoute
+  "/setup/providers/claude-code/api-key": typeof AuthenticatedSetupProvidersClaudeCodeApiKeyPageRoute
+  "/setup/providers/claude-code/custom": typeof AuthenticatedSetupProvidersClaudeCodeCustomPageRoute
+  "/setup/providers/codex/api-key": typeof AuthenticatedSetupProvidersCodexApiKeyPageRoute
+  "/setup/providers/codex/custom": typeof AuthenticatedSetupProvidersCodexCustomPageRoute
+  "/settings/project/$projectId/cloud/secrets": typeof AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof PageRoute
-  '/_authenticated': typeof AuthenticatedLayoutRouteWithChildren
-  '/_authenticated/_dashboard': typeof AuthenticatedDashboardLayoutRouteWithChildren
-  '/_authenticated/_onboarding': typeof AuthenticatedOnboardingLayoutRouteWithChildren
-  '/_authenticated/settings': typeof AuthenticatedSettingsLayoutRouteWithChildren
-  '/create-organization/': typeof CreateOrganizationPageRoute
-  '/sign-in/': typeof SignInPageRoute
-  '/_authenticated/_dashboard/issues': typeof AuthenticatedDashboardIssuesLayoutRouteWithChildren
-  '/_authenticated/_dashboard/repos': typeof AuthenticatedDashboardReposLayoutRouteWithChildren
-  '/_authenticated/_dashboard/tasks': typeof AuthenticatedDashboardTasksLayoutRouteWithChildren
-  '/_authenticated/_dashboard/v2-workspace': typeof AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren
-  '/_authenticated/settings/': typeof AuthenticatedSettingsPageRoute
-  '/_authenticated/_dashboard/dashboard/': typeof AuthenticatedDashboardDashboardPageRoute
-  '/_authenticated/_dashboard/issues/': typeof AuthenticatedDashboardIssuesPageRoute
-  '/_authenticated/_dashboard/repos/': typeof AuthenticatedDashboardReposPageRoute
-  '/_authenticated/_dashboard/tasks/': typeof AuthenticatedDashboardTasksPageRoute
-  '/_authenticated/_dashboard/v2-workspaces/': typeof AuthenticatedDashboardV2WorkspacesPageRoute
-  '/_authenticated/_dashboard/workspace/': typeof AuthenticatedDashboardWorkspacePageRoute
-  '/_authenticated/_dashboard/workspaces/': typeof AuthenticatedDashboardWorkspacesPageRoute
-  '/_authenticated/_onboarding/new-project/': typeof AuthenticatedOnboardingNewProjectPageRoute
-  '/_authenticated/_onboarding/welcome/': typeof AuthenticatedOnboardingWelcomePageRoute
-  '/_authenticated/settings/account/': typeof AuthenticatedSettingsAccountPageRoute
-  '/_authenticated/settings/agents/': typeof AuthenticatedSettingsAgentsPageRoute
-  '/_authenticated/settings/api-keys/': typeof AuthenticatedSettingsApiKeysPageRoute
-  '/_authenticated/settings/appearance/': typeof AuthenticatedSettingsAppearancePageRoute
-  '/_authenticated/settings/behavior/': typeof AuthenticatedSettingsBehaviorPageRoute
-  '/_authenticated/settings/billing/': typeof AuthenticatedSettingsBillingPageRoute
-  '/_authenticated/settings/git/': typeof AuthenticatedSettingsGitPageRoute
-  '/_authenticated/settings/integrations/': typeof AuthenticatedSettingsIntegrationsPageRoute
-  '/_authenticated/settings/keyboard/': typeof AuthenticatedSettingsKeyboardPageRoute
-  '/_authenticated/settings/models/': typeof AuthenticatedSettingsModelsPageRoute
-  '/_authenticated/settings/organization/': typeof AuthenticatedSettingsOrganizationPageRoute
-  '/_authenticated/settings/permissions/': typeof AuthenticatedSettingsPermissionsPageRoute
-  '/_authenticated/settings/presets/': typeof AuthenticatedSettingsPresetsPageRoute
-  '/_authenticated/settings/projects/': typeof AuthenticatedSettingsProjectsPageRoute
-  '/_authenticated/settings/ringtones/': typeof AuthenticatedSettingsRingtonesPageRoute
-  '/_authenticated/settings/security/': typeof AuthenticatedSettingsSecurityPageRoute
-  '/_authenticated/settings/terminal/': typeof AuthenticatedSettingsTerminalPageRoute
-  '/_authenticated/_dashboard/pending/$pendingId/': typeof AuthenticatedDashboardPendingPendingIdPageRoute
-  '/_authenticated/_dashboard/project/$projectId/': typeof AuthenticatedDashboardProjectProjectIdPageRoute
-  '/_authenticated/_dashboard/tasks/$taskId/': typeof AuthenticatedDashboardTasksTaskIdPageRoute
-  '/_authenticated/_dashboard/v2-workspace/$workspaceId/': typeof AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRoute
-  '/_authenticated/_dashboard/workspace/$workspaceId/': typeof AuthenticatedDashboardWorkspaceWorkspaceIdPageRoute
-  '/_authenticated/settings/billing/plans/': typeof AuthenticatedSettingsBillingPlansPageRoute
-  '/_authenticated/settings/project/$projectId/': typeof AuthenticatedSettingsProjectProjectIdPageRoute
-  '/_authenticated/settings/project/$projectId/cloud/': typeof AuthenticatedSettingsProjectProjectIdCloudPageRoute
-  '/_authenticated/settings/project/$projectId/general/': typeof AuthenticatedSettingsProjectProjectIdGeneralPageRoute
-  '/_authenticated/settings/project/$projectId/cloud/secrets/': typeof AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute
+  "/": typeof PageRoute
+  "/_authenticated": typeof AuthenticatedLayoutRouteWithChildren
+  "/_authenticated/_dashboard": typeof AuthenticatedDashboardLayoutRouteWithChildren
+  "/_authenticated/_onboarding": typeof AuthenticatedOnboardingLayoutRouteWithChildren
+  "/_authenticated/settings": typeof AuthenticatedSettingsLayoutRouteWithChildren
+  "/_authenticated/setup": typeof AuthenticatedSetupLayoutRouteWithChildren
+  "/create-organization/": typeof CreateOrganizationPageRoute
+  "/sign-in/": typeof SignInPageRoute
+  "/_authenticated/_dashboard/automations": typeof AuthenticatedDashboardAutomationsLayoutRouteWithChildren
+  "/_authenticated/_dashboard/issues": typeof AuthenticatedDashboardIssuesLayoutRouteWithChildren
+  "/_authenticated/_dashboard/repos": typeof AuthenticatedDashboardReposLayoutRouteWithChildren
+  "/_authenticated/_dashboard/tasks": typeof AuthenticatedDashboardTasksLayoutRouteWithChildren
+  "/_authenticated/_dashboard/v2-workspace": typeof AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren
+  "/_authenticated/settings/hosts": typeof AuthenticatedSettingsHostsLayoutRouteWithChildren
+  "/_authenticated/settings/projects": typeof AuthenticatedSettingsProjectsLayoutRouteWithChildren
+  "/_authenticated/settings/": typeof AuthenticatedSettingsPageRoute
+  "/_authenticated/_dashboard/automations/": typeof AuthenticatedDashboardAutomationsPageRoute
+  "/_authenticated/_dashboard/dashboard/": typeof AuthenticatedDashboardDashboardPageRoute
+  "/_authenticated/_dashboard/issues/": typeof AuthenticatedDashboardIssuesPageRoute
+  "/_authenticated/_dashboard/repos/": typeof AuthenticatedDashboardReposPageRoute
+  "/_authenticated/_dashboard/tasks/": typeof AuthenticatedDashboardTasksPageRoute
+  "/_authenticated/_dashboard/v2-workspaces/": typeof AuthenticatedDashboardV2WorkspacesPageRoute
+  "/_authenticated/_dashboard/workspace/": typeof AuthenticatedDashboardWorkspacePageRoute
+  "/_authenticated/_dashboard/workspaces/": typeof AuthenticatedDashboardWorkspacesPageRoute
+  "/_authenticated/_onboarding/new-project/": typeof AuthenticatedOnboardingNewProjectPageRoute
+  "/_authenticated/_onboarding/welcome/": typeof AuthenticatedOnboardingWelcomePageRoute
+  "/_authenticated/settings/account/": typeof AuthenticatedSettingsAccountPageRoute
+  "/_authenticated/settings/agents/": typeof AuthenticatedSettingsAgentsPageRoute
+  "/_authenticated/settings/api-keys/": typeof AuthenticatedSettingsApiKeysPageRoute
+  "/_authenticated/settings/appearance/": typeof AuthenticatedSettingsAppearancePageRoute
+  "/_authenticated/settings/behavior/": typeof AuthenticatedSettingsBehaviorPageRoute
+  "/_authenticated/settings/billing/": typeof AuthenticatedSettingsBillingPageRoute
+  "/_authenticated/settings/experimental/": typeof AuthenticatedSettingsExperimentalPageRoute
+  "/_authenticated/settings/git/": typeof AuthenticatedSettingsGitPageRoute
+  "/_authenticated/settings/hosts/": typeof AuthenticatedSettingsHostsPageRoute
+  "/_authenticated/settings/integrations/": typeof AuthenticatedSettingsIntegrationsPageRoute
+  "/_authenticated/settings/keyboard/": typeof AuthenticatedSettingsKeyboardPageRoute
+  "/_authenticated/settings/links/": typeof AuthenticatedSettingsLinksPageRoute
+  "/_authenticated/settings/models/": typeof AuthenticatedSettingsModelsPageRoute
+  "/_authenticated/settings/organization/": typeof AuthenticatedSettingsOrganizationPageRoute
+  "/_authenticated/settings/permissions/": typeof AuthenticatedSettingsPermissionsPageRoute
+  "/_authenticated/settings/presets/": typeof AuthenticatedSettingsPresetsPageRoute
+  "/_authenticated/settings/projects/": typeof AuthenticatedSettingsProjectsPageRoute
+  "/_authenticated/settings/ringtones/": typeof AuthenticatedSettingsRingtonesPageRoute
+  "/_authenticated/settings/security/": typeof AuthenticatedSettingsSecurityPageRoute
+  "/_authenticated/settings/terminal/": typeof AuthenticatedSettingsTerminalPageRoute
+  "/_authenticated/setup/adopt-worktrees/": typeof AuthenticatedSetupAdoptWorktreesPageRoute
+  "/_authenticated/setup/gh-cli/": typeof AuthenticatedSetupGhCliPageRoute
+  "/_authenticated/setup/permissions/": typeof AuthenticatedSetupPermissionsPageRoute
+  "/_authenticated/setup/project/": typeof AuthenticatedSetupProjectPageRoute
+  "/_authenticated/setup/providers/": typeof AuthenticatedSetupProvidersPageRoute
+  "/_authenticated/_dashboard/automations/$automationId/": typeof AuthenticatedDashboardAutomationsAutomationIdPageRoute
+  "/_authenticated/_dashboard/project/$projectId/": typeof AuthenticatedDashboardProjectProjectIdPageRoute
+  "/_authenticated/_dashboard/tasks/$taskId/": typeof AuthenticatedDashboardTasksTaskIdPageRoute
+  "/_authenticated/_dashboard/v2-workspace/$workspaceId/": typeof AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRoute
+  "/_authenticated/_dashboard/workspace/$workspaceId/": typeof AuthenticatedDashboardWorkspaceWorkspaceIdPageRoute
+  "/_authenticated/settings/billing/plans/": typeof AuthenticatedSettingsBillingPlansPageRoute
+  "/_authenticated/settings/hosts/$hostId/": typeof AuthenticatedSettingsHostsHostIdPageRoute
+  "/_authenticated/settings/projects/$projectId/": typeof AuthenticatedSettingsProjectsProjectIdPageRoute
+  "/_authenticated/setup/providers/claude-code/": typeof AuthenticatedSetupProvidersClaudeCodePageRoute
+  "/_authenticated/setup/providers/codex/": typeof AuthenticatedSetupProvidersCodexPageRoute
+  "/_authenticated/settings/project/$projectId/cloud/": typeof AuthenticatedSettingsProjectProjectIdCloudPageRoute
+  "/_authenticated/setup/providers/claude-code/api-key/": typeof AuthenticatedSetupProvidersClaudeCodeApiKeyPageRoute
+  "/_authenticated/setup/providers/claude-code/custom/": typeof AuthenticatedSetupProvidersClaudeCodeCustomPageRoute
+  "/_authenticated/setup/providers/codex/api-key/": typeof AuthenticatedSetupProvidersCodexApiKeyPageRoute
+  "/_authenticated/setup/providers/codex/custom/": typeof AuthenticatedSetupProvidersCodexCustomPageRoute
+  "/_authenticated/settings/project/$projectId/cloud/secrets/": typeof AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/settings'
-    | '/create-organization/'
-    | '/sign-in/'
-    | '/issues'
-    | '/repos'
-    | '/tasks'
-    | '/v2-workspace'
-    | '/settings/'
-    | '/dashboard/'
-    | '/issues/'
-    | '/repos/'
-    | '/tasks/'
-    | '/v2-workspaces/'
-    | '/workspace/'
-    | '/workspaces/'
-    | '/new-project/'
-    | '/welcome/'
-    | '/settings/account/'
-    | '/settings/agents/'
-    | '/settings/api-keys/'
-    | '/settings/appearance/'
-    | '/settings/behavior/'
-    | '/settings/billing/'
-    | '/settings/git/'
-    | '/settings/integrations/'
-    | '/settings/keyboard/'
-    | '/settings/models/'
-    | '/settings/organization/'
-    | '/settings/permissions/'
-    | '/settings/presets/'
-    | '/settings/projects/'
-    | '/settings/ringtones/'
-    | '/settings/security/'
-    | '/settings/terminal/'
-    | '/pending/$pendingId/'
-    | '/project/$projectId/'
-    | '/tasks/$taskId/'
-    | '/v2-workspace/$workspaceId/'
-    | '/workspace/$workspaceId/'
-    | '/settings/billing/plans/'
-    | '/settings/project/$projectId/'
-    | '/settings/project/$projectId/cloud/'
-    | '/settings/project/$projectId/general/'
-    | '/settings/project/$projectId/cloud/secrets/'
+    | "/"
+    | "/settings"
+    | "/setup"
+    | "/create-organization/"
+    | "/sign-in/"
+    | "/automations"
+    | "/issues"
+    | "/repos"
+    | "/tasks"
+    | "/v2-workspace"
+    | "/settings/hosts"
+    | "/settings/projects"
+    | "/settings/"
+    | "/automations/"
+    | "/dashboard/"
+    | "/issues/"
+    | "/repos/"
+    | "/tasks/"
+    | "/v2-workspaces/"
+    | "/workspace/"
+    | "/workspaces/"
+    | "/new-project/"
+    | "/welcome/"
+    | "/settings/account/"
+    | "/settings/agents/"
+    | "/settings/api-keys/"
+    | "/settings/appearance/"
+    | "/settings/behavior/"
+    | "/settings/billing/"
+    | "/settings/experimental/"
+    | "/settings/git/"
+    | "/settings/hosts/"
+    | "/settings/integrations/"
+    | "/settings/keyboard/"
+    | "/settings/links/"
+    | "/settings/models/"
+    | "/settings/organization/"
+    | "/settings/permissions/"
+    | "/settings/presets/"
+    | "/settings/projects/"
+    | "/settings/ringtones/"
+    | "/settings/security/"
+    | "/settings/terminal/"
+    | "/setup/adopt-worktrees/"
+    | "/setup/gh-cli/"
+    | "/setup/permissions/"
+    | "/setup/project/"
+    | "/setup/providers/"
+    | "/automations/$automationId/"
+    | "/project/$projectId/"
+    | "/tasks/$taskId/"
+    | "/v2-workspace/$workspaceId/"
+    | "/workspace/$workspaceId/"
+    | "/settings/billing/plans/"
+    | "/settings/hosts/$hostId/"
+    | "/settings/projects/$projectId/"
+    | "/setup/providers/claude-code/"
+    | "/setup/providers/codex/"
+    | "/settings/project/$projectId/cloud/"
+    | "/setup/providers/claude-code/api-key/"
+    | "/setup/providers/claude-code/custom/"
+    | "/setup/providers/codex/api-key/"
+    | "/setup/providers/codex/custom/"
+    | "/settings/project/$projectId/cloud/secrets/"
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/create-organization'
-    | '/sign-in'
-    | '/v2-workspace'
-    | '/settings'
-    | '/dashboard'
-    | '/issues'
-    | '/repos'
-    | '/tasks'
-    | '/v2-workspaces'
-    | '/workspace'
-    | '/workspaces'
-    | '/new-project'
-    | '/welcome'
-    | '/settings/account'
-    | '/settings/agents'
-    | '/settings/api-keys'
-    | '/settings/appearance'
-    | '/settings/behavior'
-    | '/settings/billing'
-    | '/settings/git'
-    | '/settings/integrations'
-    | '/settings/keyboard'
-    | '/settings/models'
-    | '/settings/organization'
-    | '/settings/permissions'
-    | '/settings/presets'
-    | '/settings/projects'
-    | '/settings/ringtones'
-    | '/settings/security'
-    | '/settings/terminal'
-    | '/pending/$pendingId'
-    | '/project/$projectId'
-    | '/tasks/$taskId'
-    | '/v2-workspace/$workspaceId'
-    | '/workspace/$workspaceId'
-    | '/settings/billing/plans'
-    | '/settings/project/$projectId'
-    | '/settings/project/$projectId/cloud'
-    | '/settings/project/$projectId/general'
-    | '/settings/project/$projectId/cloud/secrets'
+    | "/"
+    | "/setup"
+    | "/create-organization"
+    | "/sign-in"
+    | "/v2-workspace"
+    | "/settings"
+    | "/automations"
+    | "/dashboard"
+    | "/issues"
+    | "/repos"
+    | "/tasks"
+    | "/v2-workspaces"
+    | "/workspace"
+    | "/workspaces"
+    | "/new-project"
+    | "/welcome"
+    | "/settings/account"
+    | "/settings/agents"
+    | "/settings/api-keys"
+    | "/settings/appearance"
+    | "/settings/behavior"
+    | "/settings/billing"
+    | "/settings/experimental"
+    | "/settings/git"
+    | "/settings/hosts"
+    | "/settings/integrations"
+    | "/settings/keyboard"
+    | "/settings/links"
+    | "/settings/models"
+    | "/settings/organization"
+    | "/settings/permissions"
+    | "/settings/presets"
+    | "/settings/projects"
+    | "/settings/ringtones"
+    | "/settings/security"
+    | "/settings/terminal"
+    | "/setup/adopt-worktrees"
+    | "/setup/gh-cli"
+    | "/setup/permissions"
+    | "/setup/project"
+    | "/setup/providers"
+    | "/automations/$automationId"
+    | "/project/$projectId"
+    | "/tasks/$taskId"
+    | "/v2-workspace/$workspaceId"
+    | "/workspace/$workspaceId"
+    | "/settings/billing/plans"
+    | "/settings/hosts/$hostId"
+    | "/settings/projects/$projectId"
+    | "/setup/providers/claude-code"
+    | "/setup/providers/codex"
+    | "/settings/project/$projectId/cloud"
+    | "/setup/providers/claude-code/api-key"
+    | "/setup/providers/claude-code/custom"
+    | "/setup/providers/codex/api-key"
+    | "/setup/providers/codex/custom"
+    | "/settings/project/$projectId/cloud/secrets"
   id:
-    | '__root__'
-    | '/'
-    | '/_authenticated'
-    | '/_authenticated/_dashboard'
-    | '/_authenticated/_onboarding'
-    | '/_authenticated/settings'
-    | '/create-organization/'
-    | '/sign-in/'
-    | '/_authenticated/_dashboard/issues'
-    | '/_authenticated/_dashboard/repos'
-    | '/_authenticated/_dashboard/tasks'
-    | '/_authenticated/_dashboard/v2-workspace'
-    | '/_authenticated/settings/'
-    | '/_authenticated/_dashboard/dashboard/'
-    | '/_authenticated/_dashboard/issues/'
-    | '/_authenticated/_dashboard/repos/'
-    | '/_authenticated/_dashboard/tasks/'
-    | '/_authenticated/_dashboard/v2-workspaces/'
-    | '/_authenticated/_dashboard/workspace/'
-    | '/_authenticated/_dashboard/workspaces/'
-    | '/_authenticated/_onboarding/new-project/'
-    | '/_authenticated/_onboarding/welcome/'
-    | '/_authenticated/settings/account/'
-    | '/_authenticated/settings/agents/'
-    | '/_authenticated/settings/api-keys/'
-    | '/_authenticated/settings/appearance/'
-    | '/_authenticated/settings/behavior/'
-    | '/_authenticated/settings/billing/'
-    | '/_authenticated/settings/git/'
-    | '/_authenticated/settings/integrations/'
-    | '/_authenticated/settings/keyboard/'
-    | '/_authenticated/settings/models/'
-    | '/_authenticated/settings/organization/'
-    | '/_authenticated/settings/permissions/'
-    | '/_authenticated/settings/presets/'
-    | '/_authenticated/settings/projects/'
-    | '/_authenticated/settings/ringtones/'
-    | '/_authenticated/settings/security/'
-    | '/_authenticated/settings/terminal/'
-    | '/_authenticated/_dashboard/pending/$pendingId/'
-    | '/_authenticated/_dashboard/project/$projectId/'
-    | '/_authenticated/_dashboard/tasks/$taskId/'
-    | '/_authenticated/_dashboard/v2-workspace/$workspaceId/'
-    | '/_authenticated/_dashboard/workspace/$workspaceId/'
-    | '/_authenticated/settings/billing/plans/'
-    | '/_authenticated/settings/project/$projectId/'
-    | '/_authenticated/settings/project/$projectId/cloud/'
-    | '/_authenticated/settings/project/$projectId/general/'
-    | '/_authenticated/settings/project/$projectId/cloud/secrets/'
+    | "__root__"
+    | "/"
+    | "/_authenticated"
+    | "/_authenticated/_dashboard"
+    | "/_authenticated/_onboarding"
+    | "/_authenticated/settings"
+    | "/_authenticated/setup"
+    | "/create-organization/"
+    | "/sign-in/"
+    | "/_authenticated/_dashboard/automations"
+    | "/_authenticated/_dashboard/issues"
+    | "/_authenticated/_dashboard/repos"
+    | "/_authenticated/_dashboard/tasks"
+    | "/_authenticated/_dashboard/v2-workspace"
+    | "/_authenticated/settings/hosts"
+    | "/_authenticated/settings/projects"
+    | "/_authenticated/settings/"
+    | "/_authenticated/_dashboard/automations/"
+    | "/_authenticated/_dashboard/dashboard/"
+    | "/_authenticated/_dashboard/issues/"
+    | "/_authenticated/_dashboard/repos/"
+    | "/_authenticated/_dashboard/tasks/"
+    | "/_authenticated/_dashboard/v2-workspaces/"
+    | "/_authenticated/_dashboard/workspace/"
+    | "/_authenticated/_dashboard/workspaces/"
+    | "/_authenticated/_onboarding/new-project/"
+    | "/_authenticated/_onboarding/welcome/"
+    | "/_authenticated/settings/account/"
+    | "/_authenticated/settings/agents/"
+    | "/_authenticated/settings/api-keys/"
+    | "/_authenticated/settings/appearance/"
+    | "/_authenticated/settings/behavior/"
+    | "/_authenticated/settings/billing/"
+    | "/_authenticated/settings/experimental/"
+    | "/_authenticated/settings/git/"
+    | "/_authenticated/settings/hosts/"
+    | "/_authenticated/settings/integrations/"
+    | "/_authenticated/settings/keyboard/"
+    | "/_authenticated/settings/links/"
+    | "/_authenticated/settings/models/"
+    | "/_authenticated/settings/organization/"
+    | "/_authenticated/settings/permissions/"
+    | "/_authenticated/settings/presets/"
+    | "/_authenticated/settings/projects/"
+    | "/_authenticated/settings/ringtones/"
+    | "/_authenticated/settings/security/"
+    | "/_authenticated/settings/terminal/"
+    | "/_authenticated/setup/adopt-worktrees/"
+    | "/_authenticated/setup/gh-cli/"
+    | "/_authenticated/setup/permissions/"
+    | "/_authenticated/setup/project/"
+    | "/_authenticated/setup/providers/"
+    | "/_authenticated/_dashboard/automations/$automationId/"
+    | "/_authenticated/_dashboard/project/$projectId/"
+    | "/_authenticated/_dashboard/tasks/$taskId/"
+    | "/_authenticated/_dashboard/v2-workspace/$workspaceId/"
+    | "/_authenticated/_dashboard/workspace/$workspaceId/"
+    | "/_authenticated/settings/billing/plans/"
+    | "/_authenticated/settings/hosts/$hostId/"
+    | "/_authenticated/settings/projects/$projectId/"
+    | "/_authenticated/setup/providers/claude-code/"
+    | "/_authenticated/setup/providers/codex/"
+    | "/_authenticated/settings/project/$projectId/cloud/"
+    | "/_authenticated/setup/providers/claude-code/api-key/"
+    | "/_authenticated/setup/providers/claude-code/custom/"
+    | "/_authenticated/setup/providers/codex/api-key/"
+    | "/_authenticated/setup/providers/codex/custom/"
+    | "/_authenticated/settings/project/$projectId/cloud/secrets/"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -631,346 +872,497 @@ export interface RootRouteChildren {
   SignInPageRoute: typeof SignInPageRoute
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
+    "/_authenticated": {
+      id: "/_authenticated"
+      path: ""
+      fullPath: "/"
       preLoaderRoute: typeof AuthenticatedLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
+    "/": {
+      id: "/"
+      path: "/"
+      fullPath: "/"
       preLoaderRoute: typeof PageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sign-in/': {
-      id: '/sign-in/'
-      path: '/sign-in'
-      fullPath: '/sign-in/'
+    "/sign-in/": {
+      id: "/sign-in/"
+      path: "/sign-in"
+      fullPath: "/sign-in/"
       preLoaderRoute: typeof SignInPageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/create-organization/': {
-      id: '/create-organization/'
-      path: '/create-organization'
-      fullPath: '/create-organization/'
+    "/create-organization/": {
+      id: "/create-organization/"
+      path: "/create-organization"
+      fullPath: "/create-organization/"
       preLoaderRoute: typeof CreateOrganizationPageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/settings': {
-      id: '/_authenticated/settings'
-      path: '/settings'
-      fullPath: '/settings'
+    "/_authenticated/setup": {
+      id: "/_authenticated/setup"
+      path: "/setup"
+      fullPath: "/setup"
+      preLoaderRoute: typeof AuthenticatedSetupLayoutRouteImport
+      parentRoute: typeof AuthenticatedLayoutRoute
+    }
+    "/_authenticated/settings": {
+      id: "/_authenticated/settings"
+      path: "/settings"
+      fullPath: "/settings"
       preLoaderRoute: typeof AuthenticatedSettingsLayoutRouteImport
       parentRoute: typeof AuthenticatedLayoutRoute
     }
-    '/_authenticated/_onboarding': {
-      id: '/_authenticated/_onboarding'
-      path: ''
-      fullPath: '/'
+    "/_authenticated/_onboarding": {
+      id: "/_authenticated/_onboarding"
+      path: ""
+      fullPath: "/"
       preLoaderRoute: typeof AuthenticatedOnboardingLayoutRouteImport
       parentRoute: typeof AuthenticatedLayoutRoute
     }
-    '/_authenticated/_dashboard': {
-      id: '/_authenticated/_dashboard'
-      path: ''
-      fullPath: '/'
+    "/_authenticated/_dashboard": {
+      id: "/_authenticated/_dashboard"
+      path: ""
+      fullPath: "/"
       preLoaderRoute: typeof AuthenticatedDashboardLayoutRouteImport
       parentRoute: typeof AuthenticatedLayoutRoute
     }
-    '/_authenticated/settings/': {
-      id: '/_authenticated/settings/'
-      path: '/'
-      fullPath: '/settings/'
+    "/_authenticated/settings/": {
+      id: "/_authenticated/settings/"
+      path: "/"
+      fullPath: "/settings/"
       preLoaderRoute: typeof AuthenticatedSettingsPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/_dashboard/v2-workspace': {
-      id: '/_authenticated/_dashboard/v2-workspace'
-      path: '/v2-workspace'
-      fullPath: '/v2-workspace'
+    "/_authenticated/settings/projects": {
+      id: "/_authenticated/settings/projects"
+      path: "/projects"
+      fullPath: "/settings/projects"
+      preLoaderRoute: typeof AuthenticatedSettingsProjectsLayoutRouteImport
+      parentRoute: typeof AuthenticatedSettingsLayoutRoute
+    }
+    "/_authenticated/settings/hosts": {
+      id: "/_authenticated/settings/hosts"
+      path: "/hosts"
+      fullPath: "/settings/hosts"
+      preLoaderRoute: typeof AuthenticatedSettingsHostsLayoutRouteImport
+      parentRoute: typeof AuthenticatedSettingsLayoutRoute
+    }
+    "/_authenticated/_dashboard/v2-workspace": {
+      id: "/_authenticated/_dashboard/v2-workspace"
+      path: "/v2-workspace"
+      fullPath: "/v2-workspace"
       preLoaderRoute: typeof AuthenticatedDashboardV2WorkspaceLayoutRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
-    '/_authenticated/_dashboard/tasks': {
-      id: '/_authenticated/_dashboard/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
+    "/_authenticated/_dashboard/tasks": {
+      id: "/_authenticated/_dashboard/tasks"
+      path: "/tasks"
+      fullPath: "/tasks"
       preLoaderRoute: typeof AuthenticatedDashboardTasksLayoutRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
-    '/_authenticated/_dashboard/repos': {
-      id: '/_authenticated/_dashboard/repos'
-      path: '/repos'
-      fullPath: '/repos'
+    "/_authenticated/_dashboard/repos": {
+      id: "/_authenticated/_dashboard/repos"
+      path: "/repos"
+      fullPath: "/repos"
       preLoaderRoute: typeof AuthenticatedDashboardReposLayoutRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
-    '/_authenticated/_dashboard/issues': {
-      id: '/_authenticated/_dashboard/issues'
-      path: '/issues'
-      fullPath: '/issues'
+    "/_authenticated/_dashboard/issues": {
+      id: "/_authenticated/_dashboard/issues"
+      path: "/issues"
+      fullPath: "/issues"
       preLoaderRoute: typeof AuthenticatedDashboardIssuesLayoutRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
-    '/_authenticated/settings/terminal/': {
-      id: '/_authenticated/settings/terminal/'
-      path: '/terminal'
-      fullPath: '/settings/terminal/'
+    "/_authenticated/_dashboard/automations": {
+      id: "/_authenticated/_dashboard/automations"
+      path: "/automations"
+      fullPath: "/automations"
+      preLoaderRoute: typeof AuthenticatedDashboardAutomationsLayoutRouteImport
+      parentRoute: typeof AuthenticatedDashboardLayoutRoute
+    }
+    "/_authenticated/setup/providers/": {
+      id: "/_authenticated/setup/providers/"
+      path: "/providers"
+      fullPath: "/setup/providers/"
+      preLoaderRoute: typeof AuthenticatedSetupProvidersPageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
+    }
+    "/_authenticated/setup/project/": {
+      id: "/_authenticated/setup/project/"
+      path: "/project"
+      fullPath: "/setup/project/"
+      preLoaderRoute: typeof AuthenticatedSetupProjectPageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
+    }
+    "/_authenticated/setup/permissions/": {
+      id: "/_authenticated/setup/permissions/"
+      path: "/permissions"
+      fullPath: "/setup/permissions/"
+      preLoaderRoute: typeof AuthenticatedSetupPermissionsPageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
+    }
+    "/_authenticated/setup/gh-cli/": {
+      id: "/_authenticated/setup/gh-cli/"
+      path: "/gh-cli"
+      fullPath: "/setup/gh-cli/"
+      preLoaderRoute: typeof AuthenticatedSetupGhCliPageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
+    }
+    "/_authenticated/setup/adopt-worktrees/": {
+      id: "/_authenticated/setup/adopt-worktrees/"
+      path: "/adopt-worktrees"
+      fullPath: "/setup/adopt-worktrees/"
+      preLoaderRoute: typeof AuthenticatedSetupAdoptWorktreesPageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
+    }
+    "/_authenticated/settings/terminal/": {
+      id: "/_authenticated/settings/terminal/"
+      path: "/terminal"
+      fullPath: "/settings/terminal/"
       preLoaderRoute: typeof AuthenticatedSettingsTerminalPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/security/': {
-      id: '/_authenticated/settings/security/'
-      path: '/security'
-      fullPath: '/settings/security/'
+    "/_authenticated/settings/security/": {
+      id: "/_authenticated/settings/security/"
+      path: "/security"
+      fullPath: "/settings/security/"
       preLoaderRoute: typeof AuthenticatedSettingsSecurityPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/ringtones/': {
-      id: '/_authenticated/settings/ringtones/'
-      path: '/ringtones'
-      fullPath: '/settings/ringtones/'
+    "/_authenticated/settings/ringtones/": {
+      id: "/_authenticated/settings/ringtones/"
+      path: "/ringtones"
+      fullPath: "/settings/ringtones/"
       preLoaderRoute: typeof AuthenticatedSettingsRingtonesPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/projects/': {
-      id: '/_authenticated/settings/projects/'
-      path: '/projects'
-      fullPath: '/settings/projects/'
+    "/_authenticated/settings/projects/": {
+      id: "/_authenticated/settings/projects/"
+      path: "/"
+      fullPath: "/settings/projects/"
       preLoaderRoute: typeof AuthenticatedSettingsProjectsPageRouteImport
-      parentRoute: typeof AuthenticatedSettingsLayoutRoute
+      parentRoute: typeof AuthenticatedSettingsProjectsLayoutRoute
     }
-    '/_authenticated/settings/presets/': {
-      id: '/_authenticated/settings/presets/'
-      path: '/presets'
-      fullPath: '/settings/presets/'
+    "/_authenticated/settings/presets/": {
+      id: "/_authenticated/settings/presets/"
+      path: "/presets"
+      fullPath: "/settings/presets/"
       preLoaderRoute: typeof AuthenticatedSettingsPresetsPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/permissions/': {
-      id: '/_authenticated/settings/permissions/'
-      path: '/permissions'
-      fullPath: '/settings/permissions/'
+    "/_authenticated/settings/permissions/": {
+      id: "/_authenticated/settings/permissions/"
+      path: "/permissions"
+      fullPath: "/settings/permissions/"
       preLoaderRoute: typeof AuthenticatedSettingsPermissionsPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/organization/': {
-      id: '/_authenticated/settings/organization/'
-      path: '/organization'
-      fullPath: '/settings/organization/'
+    "/_authenticated/settings/organization/": {
+      id: "/_authenticated/settings/organization/"
+      path: "/organization"
+      fullPath: "/settings/organization/"
       preLoaderRoute: typeof AuthenticatedSettingsOrganizationPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/models/': {
-      id: '/_authenticated/settings/models/'
-      path: '/models'
-      fullPath: '/settings/models/'
+    "/_authenticated/settings/models/": {
+      id: "/_authenticated/settings/models/"
+      path: "/models"
+      fullPath: "/settings/models/"
       preLoaderRoute: typeof AuthenticatedSettingsModelsPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/keyboard/': {
-      id: '/_authenticated/settings/keyboard/'
-      path: '/keyboard'
-      fullPath: '/settings/keyboard/'
+    "/_authenticated/settings/links/": {
+      id: "/_authenticated/settings/links/"
+      path: "/links"
+      fullPath: "/settings/links/"
+      preLoaderRoute: typeof AuthenticatedSettingsLinksPageRouteImport
+      parentRoute: typeof AuthenticatedSettingsLayoutRoute
+    }
+    "/_authenticated/settings/keyboard/": {
+      id: "/_authenticated/settings/keyboard/"
+      path: "/keyboard"
+      fullPath: "/settings/keyboard/"
       preLoaderRoute: typeof AuthenticatedSettingsKeyboardPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/integrations/': {
-      id: '/_authenticated/settings/integrations/'
-      path: '/integrations'
-      fullPath: '/settings/integrations/'
+    "/_authenticated/settings/integrations/": {
+      id: "/_authenticated/settings/integrations/"
+      path: "/integrations"
+      fullPath: "/settings/integrations/"
       preLoaderRoute: typeof AuthenticatedSettingsIntegrationsPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/git/': {
-      id: '/_authenticated/settings/git/'
-      path: '/git'
-      fullPath: '/settings/git/'
+    "/_authenticated/settings/hosts/": {
+      id: "/_authenticated/settings/hosts/"
+      path: "/"
+      fullPath: "/settings/hosts/"
+      preLoaderRoute: typeof AuthenticatedSettingsHostsPageRouteImport
+      parentRoute: typeof AuthenticatedSettingsHostsLayoutRoute
+    }
+    "/_authenticated/settings/git/": {
+      id: "/_authenticated/settings/git/"
+      path: "/git"
+      fullPath: "/settings/git/"
       preLoaderRoute: typeof AuthenticatedSettingsGitPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/billing/': {
-      id: '/_authenticated/settings/billing/'
-      path: '/billing'
-      fullPath: '/settings/billing/'
+    "/_authenticated/settings/experimental/": {
+      id: "/_authenticated/settings/experimental/"
+      path: "/experimental"
+      fullPath: "/settings/experimental/"
+      preLoaderRoute: typeof AuthenticatedSettingsExperimentalPageRouteImport
+      parentRoute: typeof AuthenticatedSettingsLayoutRoute
+    }
+    "/_authenticated/settings/billing/": {
+      id: "/_authenticated/settings/billing/"
+      path: "/billing"
+      fullPath: "/settings/billing/"
       preLoaderRoute: typeof AuthenticatedSettingsBillingPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/behavior/': {
-      id: '/_authenticated/settings/behavior/'
-      path: '/behavior'
-      fullPath: '/settings/behavior/'
+    "/_authenticated/settings/behavior/": {
+      id: "/_authenticated/settings/behavior/"
+      path: "/behavior"
+      fullPath: "/settings/behavior/"
       preLoaderRoute: typeof AuthenticatedSettingsBehaviorPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/appearance/': {
-      id: '/_authenticated/settings/appearance/'
-      path: '/appearance'
-      fullPath: '/settings/appearance/'
+    "/_authenticated/settings/appearance/": {
+      id: "/_authenticated/settings/appearance/"
+      path: "/appearance"
+      fullPath: "/settings/appearance/"
       preLoaderRoute: typeof AuthenticatedSettingsAppearancePageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/api-keys/': {
-      id: '/_authenticated/settings/api-keys/'
-      path: '/api-keys'
-      fullPath: '/settings/api-keys/'
+    "/_authenticated/settings/api-keys/": {
+      id: "/_authenticated/settings/api-keys/"
+      path: "/api-keys"
+      fullPath: "/settings/api-keys/"
       preLoaderRoute: typeof AuthenticatedSettingsApiKeysPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/agents/': {
-      id: '/_authenticated/settings/agents/'
-      path: '/agents'
-      fullPath: '/settings/agents/'
+    "/_authenticated/settings/agents/": {
+      id: "/_authenticated/settings/agents/"
+      path: "/agents"
+      fullPath: "/settings/agents/"
       preLoaderRoute: typeof AuthenticatedSettingsAgentsPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/account/': {
-      id: '/_authenticated/settings/account/'
-      path: '/account'
-      fullPath: '/settings/account/'
+    "/_authenticated/settings/account/": {
+      id: "/_authenticated/settings/account/"
+      path: "/account"
+      fullPath: "/settings/account/"
       preLoaderRoute: typeof AuthenticatedSettingsAccountPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/_onboarding/welcome/': {
-      id: '/_authenticated/_onboarding/welcome/'
-      path: '/welcome'
-      fullPath: '/welcome/'
+    "/_authenticated/_onboarding/welcome/": {
+      id: "/_authenticated/_onboarding/welcome/"
+      path: "/welcome"
+      fullPath: "/welcome/"
       preLoaderRoute: typeof AuthenticatedOnboardingWelcomePageRouteImport
       parentRoute: typeof AuthenticatedOnboardingLayoutRoute
     }
-    '/_authenticated/_onboarding/new-project/': {
-      id: '/_authenticated/_onboarding/new-project/'
-      path: '/new-project'
-      fullPath: '/new-project/'
+    "/_authenticated/_onboarding/new-project/": {
+      id: "/_authenticated/_onboarding/new-project/"
+      path: "/new-project"
+      fullPath: "/new-project/"
       preLoaderRoute: typeof AuthenticatedOnboardingNewProjectPageRouteImport
       parentRoute: typeof AuthenticatedOnboardingLayoutRoute
     }
-    '/_authenticated/_dashboard/workspaces/': {
-      id: '/_authenticated/_dashboard/workspaces/'
-      path: '/workspaces'
-      fullPath: '/workspaces/'
+    "/_authenticated/_dashboard/workspaces/": {
+      id: "/_authenticated/_dashboard/workspaces/"
+      path: "/workspaces"
+      fullPath: "/workspaces/"
       preLoaderRoute: typeof AuthenticatedDashboardWorkspacesPageRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
-    '/_authenticated/_dashboard/workspace/': {
-      id: '/_authenticated/_dashboard/workspace/'
-      path: '/workspace'
-      fullPath: '/workspace/'
+    "/_authenticated/_dashboard/workspace/": {
+      id: "/_authenticated/_dashboard/workspace/"
+      path: "/workspace"
+      fullPath: "/workspace/"
       preLoaderRoute: typeof AuthenticatedDashboardWorkspacePageRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
-    '/_authenticated/_dashboard/v2-workspaces/': {
-      id: '/_authenticated/_dashboard/v2-workspaces/'
-      path: '/v2-workspaces'
-      fullPath: '/v2-workspaces/'
+    "/_authenticated/_dashboard/v2-workspaces/": {
+      id: "/_authenticated/_dashboard/v2-workspaces/"
+      path: "/v2-workspaces"
+      fullPath: "/v2-workspaces/"
       preLoaderRoute: typeof AuthenticatedDashboardV2WorkspacesPageRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
-    '/_authenticated/_dashboard/tasks/': {
-      id: '/_authenticated/_dashboard/tasks/'
-      path: '/'
-      fullPath: '/tasks/'
+    "/_authenticated/_dashboard/tasks/": {
+      id: "/_authenticated/_dashboard/tasks/"
+      path: "/"
+      fullPath: "/tasks/"
       preLoaderRoute: typeof AuthenticatedDashboardTasksPageRouteImport
       parentRoute: typeof AuthenticatedDashboardTasksLayoutRoute
     }
-    '/_authenticated/_dashboard/repos/': {
-      id: '/_authenticated/_dashboard/repos/'
-      path: '/'
-      fullPath: '/repos/'
+    "/_authenticated/_dashboard/repos/": {
+      id: "/_authenticated/_dashboard/repos/"
+      path: "/"
+      fullPath: "/repos/"
       preLoaderRoute: typeof AuthenticatedDashboardReposPageRouteImport
       parentRoute: typeof AuthenticatedDashboardReposLayoutRoute
     }
-    '/_authenticated/_dashboard/issues/': {
-      id: '/_authenticated/_dashboard/issues/'
-      path: '/'
-      fullPath: '/issues/'
+    "/_authenticated/_dashboard/issues/": {
+      id: "/_authenticated/_dashboard/issues/"
+      path: "/"
+      fullPath: "/issues/"
       preLoaderRoute: typeof AuthenticatedDashboardIssuesPageRouteImport
       parentRoute: typeof AuthenticatedDashboardIssuesLayoutRoute
     }
-    '/_authenticated/_dashboard/dashboard/': {
-      id: '/_authenticated/_dashboard/dashboard/'
-      path: '/dashboard'
-      fullPath: '/dashboard/'
+    "/_authenticated/_dashboard/dashboard/": {
+      id: "/_authenticated/_dashboard/dashboard/"
+      path: "/dashboard"
+      fullPath: "/dashboard/"
       preLoaderRoute: typeof AuthenticatedDashboardDashboardPageRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
-    '/_authenticated/settings/project/$projectId/': {
-      id: '/_authenticated/settings/project/$projectId/'
-      path: '/project/$projectId'
-      fullPath: '/settings/project/$projectId/'
-      preLoaderRoute: typeof AuthenticatedSettingsProjectProjectIdPageRouteImport
-      parentRoute: typeof AuthenticatedSettingsLayoutRoute
+    "/_authenticated/_dashboard/automations/": {
+      id: "/_authenticated/_dashboard/automations/"
+      path: "/"
+      fullPath: "/automations/"
+      preLoaderRoute: typeof AuthenticatedDashboardAutomationsPageRouteImport
+      parentRoute: typeof AuthenticatedDashboardAutomationsLayoutRoute
     }
-    '/_authenticated/settings/billing/plans/': {
-      id: '/_authenticated/settings/billing/plans/'
-      path: '/billing/plans'
-      fullPath: '/settings/billing/plans/'
+    "/_authenticated/setup/providers/codex/": {
+      id: "/_authenticated/setup/providers/codex/"
+      path: "/providers/codex"
+      fullPath: "/setup/providers/codex/"
+      preLoaderRoute: typeof AuthenticatedSetupProvidersCodexPageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
+    }
+    "/_authenticated/setup/providers/claude-code/": {
+      id: "/_authenticated/setup/providers/claude-code/"
+      path: "/providers/claude-code"
+      fullPath: "/setup/providers/claude-code/"
+      preLoaderRoute: typeof AuthenticatedSetupProvidersClaudeCodePageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
+    }
+    "/_authenticated/settings/projects/$projectId/": {
+      id: "/_authenticated/settings/projects/$projectId/"
+      path: "/$projectId"
+      fullPath: "/settings/projects/$projectId/"
+      preLoaderRoute: typeof AuthenticatedSettingsProjectsProjectIdPageRouteImport
+      parentRoute: typeof AuthenticatedSettingsProjectsLayoutRoute
+    }
+    "/_authenticated/settings/hosts/$hostId/": {
+      id: "/_authenticated/settings/hosts/$hostId/"
+      path: "/$hostId"
+      fullPath: "/settings/hosts/$hostId/"
+      preLoaderRoute: typeof AuthenticatedSettingsHostsHostIdPageRouteImport
+      parentRoute: typeof AuthenticatedSettingsHostsLayoutRoute
+    }
+    "/_authenticated/settings/billing/plans/": {
+      id: "/_authenticated/settings/billing/plans/"
+      path: "/billing/plans"
+      fullPath: "/settings/billing/plans/"
       preLoaderRoute: typeof AuthenticatedSettingsBillingPlansPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/_dashboard/workspace/$workspaceId/': {
-      id: '/_authenticated/_dashboard/workspace/$workspaceId/'
-      path: '/workspace/$workspaceId'
-      fullPath: '/workspace/$workspaceId/'
+    "/_authenticated/_dashboard/workspace/$workspaceId/": {
+      id: "/_authenticated/_dashboard/workspace/$workspaceId/"
+      path: "/workspace/$workspaceId"
+      fullPath: "/workspace/$workspaceId/"
       preLoaderRoute: typeof AuthenticatedDashboardWorkspaceWorkspaceIdPageRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
-    '/_authenticated/_dashboard/v2-workspace/$workspaceId/': {
-      id: '/_authenticated/_dashboard/v2-workspace/$workspaceId/'
-      path: '/$workspaceId'
-      fullPath: '/v2-workspace/$workspaceId/'
+    "/_authenticated/_dashboard/v2-workspace/$workspaceId/": {
+      id: "/_authenticated/_dashboard/v2-workspace/$workspaceId/"
+      path: "/$workspaceId"
+      fullPath: "/v2-workspace/$workspaceId/"
       preLoaderRoute: typeof AuthenticatedDashboardV2WorkspaceWorkspaceIdPageRouteImport
       parentRoute: typeof AuthenticatedDashboardV2WorkspaceLayoutRoute
     }
-    '/_authenticated/_dashboard/tasks/$taskId/': {
-      id: '/_authenticated/_dashboard/tasks/$taskId/'
-      path: '/$taskId'
-      fullPath: '/tasks/$taskId/'
+    "/_authenticated/_dashboard/tasks/$taskId/": {
+      id: "/_authenticated/_dashboard/tasks/$taskId/"
+      path: "/$taskId"
+      fullPath: "/tasks/$taskId/"
       preLoaderRoute: typeof AuthenticatedDashboardTasksTaskIdPageRouteImport
       parentRoute: typeof AuthenticatedDashboardTasksLayoutRoute
     }
-    '/_authenticated/_dashboard/project/$projectId/': {
-      id: '/_authenticated/_dashboard/project/$projectId/'
-      path: '/project/$projectId'
-      fullPath: '/project/$projectId/'
+    "/_authenticated/_dashboard/project/$projectId/": {
+      id: "/_authenticated/_dashboard/project/$projectId/"
+      path: "/project/$projectId"
+      fullPath: "/project/$projectId/"
       preLoaderRoute: typeof AuthenticatedDashboardProjectProjectIdPageRouteImport
       parentRoute: typeof AuthenticatedDashboardLayoutRoute
     }
-    '/_authenticated/_dashboard/pending/$pendingId/': {
-      id: '/_authenticated/_dashboard/pending/$pendingId/'
-      path: '/pending/$pendingId'
-      fullPath: '/pending/$pendingId/'
-      preLoaderRoute: typeof AuthenticatedDashboardPendingPendingIdPageRouteImport
-      parentRoute: typeof AuthenticatedDashboardLayoutRoute
+    "/_authenticated/_dashboard/automations/$automationId/": {
+      id: "/_authenticated/_dashboard/automations/$automationId/"
+      path: "/$automationId"
+      fullPath: "/automations/$automationId/"
+      preLoaderRoute: typeof AuthenticatedDashboardAutomationsAutomationIdPageRouteImport
+      parentRoute: typeof AuthenticatedDashboardAutomationsLayoutRoute
     }
-    '/_authenticated/settings/project/$projectId/general/': {
-      id: '/_authenticated/settings/project/$projectId/general/'
-      path: '/project/$projectId/general'
-      fullPath: '/settings/project/$projectId/general/'
-      preLoaderRoute: typeof AuthenticatedSettingsProjectProjectIdGeneralPageRouteImport
-      parentRoute: typeof AuthenticatedSettingsLayoutRoute
+    "/_authenticated/setup/providers/codex/custom/": {
+      id: "/_authenticated/setup/providers/codex/custom/"
+      path: "/providers/codex/custom"
+      fullPath: "/setup/providers/codex/custom/"
+      preLoaderRoute: typeof AuthenticatedSetupProvidersCodexCustomPageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
     }
-    '/_authenticated/settings/project/$projectId/cloud/': {
-      id: '/_authenticated/settings/project/$projectId/cloud/'
-      path: '/project/$projectId/cloud'
-      fullPath: '/settings/project/$projectId/cloud/'
+    "/_authenticated/setup/providers/codex/api-key/": {
+      id: "/_authenticated/setup/providers/codex/api-key/"
+      path: "/providers/codex/api-key"
+      fullPath: "/setup/providers/codex/api-key/"
+      preLoaderRoute: typeof AuthenticatedSetupProvidersCodexApiKeyPageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
+    }
+    "/_authenticated/setup/providers/claude-code/custom/": {
+      id: "/_authenticated/setup/providers/claude-code/custom/"
+      path: "/providers/claude-code/custom"
+      fullPath: "/setup/providers/claude-code/custom/"
+      preLoaderRoute: typeof AuthenticatedSetupProvidersClaudeCodeCustomPageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
+    }
+    "/_authenticated/setup/providers/claude-code/api-key/": {
+      id: "/_authenticated/setup/providers/claude-code/api-key/"
+      path: "/providers/claude-code/api-key"
+      fullPath: "/setup/providers/claude-code/api-key/"
+      preLoaderRoute: typeof AuthenticatedSetupProvidersClaudeCodeApiKeyPageRouteImport
+      parentRoute: typeof AuthenticatedSetupLayoutRoute
+    }
+    "/_authenticated/settings/project/$projectId/cloud/": {
+      id: "/_authenticated/settings/project/$projectId/cloud/"
+      path: "/project/$projectId/cloud"
+      fullPath: "/settings/project/$projectId/cloud/"
       preLoaderRoute: typeof AuthenticatedSettingsProjectProjectIdCloudPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
-    '/_authenticated/settings/project/$projectId/cloud/secrets/': {
-      id: '/_authenticated/settings/project/$projectId/cloud/secrets/'
-      path: '/project/$projectId/cloud/secrets'
-      fullPath: '/settings/project/$projectId/cloud/secrets/'
+    "/_authenticated/settings/project/$projectId/cloud/secrets/": {
+      id: "/_authenticated/settings/project/$projectId/cloud/secrets/"
+      path: "/project/$projectId/cloud/secrets"
+      fullPath: "/settings/project/$projectId/cloud/secrets/"
       preLoaderRoute: typeof AuthenticatedSettingsProjectProjectIdCloudSecretsPageRouteImport
       parentRoute: typeof AuthenticatedSettingsLayoutRoute
     }
   }
 }
+
+interface AuthenticatedDashboardAutomationsLayoutRouteChildren {
+  AuthenticatedDashboardAutomationsPageRoute: typeof AuthenticatedDashboardAutomationsPageRoute
+  AuthenticatedDashboardAutomationsAutomationIdPageRoute: typeof AuthenticatedDashboardAutomationsAutomationIdPageRoute
+}
+
+const AuthenticatedDashboardAutomationsLayoutRouteChildren: AuthenticatedDashboardAutomationsLayoutRouteChildren =
+  {
+    AuthenticatedDashboardAutomationsPageRoute:
+      AuthenticatedDashboardAutomationsPageRoute,
+    AuthenticatedDashboardAutomationsAutomationIdPageRoute:
+      AuthenticatedDashboardAutomationsAutomationIdPageRoute,
+  }
+
+const AuthenticatedDashboardAutomationsLayoutRouteWithChildren =
+  AuthenticatedDashboardAutomationsLayoutRoute._addFileChildren(
+    AuthenticatedDashboardAutomationsLayoutRouteChildren,
+  )
 
 interface AuthenticatedDashboardIssuesLayoutRouteChildren {
   AuthenticatedDashboardIssuesPageRoute: typeof AuthenticatedDashboardIssuesPageRoute
@@ -1034,6 +1426,7 @@ const AuthenticatedDashboardV2WorkspaceLayoutRouteWithChildren =
   )
 
 interface AuthenticatedDashboardLayoutRouteChildren {
+  AuthenticatedDashboardAutomationsLayoutRoute: typeof AuthenticatedDashboardAutomationsLayoutRouteWithChildren
   AuthenticatedDashboardIssuesLayoutRoute: typeof AuthenticatedDashboardIssuesLayoutRouteWithChildren
   AuthenticatedDashboardReposLayoutRoute: typeof AuthenticatedDashboardReposLayoutRouteWithChildren
   AuthenticatedDashboardTasksLayoutRoute: typeof AuthenticatedDashboardTasksLayoutRouteWithChildren
@@ -1042,13 +1435,14 @@ interface AuthenticatedDashboardLayoutRouteChildren {
   AuthenticatedDashboardV2WorkspacesPageRoute: typeof AuthenticatedDashboardV2WorkspacesPageRoute
   AuthenticatedDashboardWorkspacePageRoute: typeof AuthenticatedDashboardWorkspacePageRoute
   AuthenticatedDashboardWorkspacesPageRoute: typeof AuthenticatedDashboardWorkspacesPageRoute
-  AuthenticatedDashboardPendingPendingIdPageRoute: typeof AuthenticatedDashboardPendingPendingIdPageRoute
   AuthenticatedDashboardProjectProjectIdPageRoute: typeof AuthenticatedDashboardProjectProjectIdPageRoute
   AuthenticatedDashboardWorkspaceWorkspaceIdPageRoute: typeof AuthenticatedDashboardWorkspaceWorkspaceIdPageRoute
 }
 
 const AuthenticatedDashboardLayoutRouteChildren: AuthenticatedDashboardLayoutRouteChildren =
   {
+    AuthenticatedDashboardAutomationsLayoutRoute:
+      AuthenticatedDashboardAutomationsLayoutRouteWithChildren,
     AuthenticatedDashboardIssuesLayoutRoute:
       AuthenticatedDashboardIssuesLayoutRouteWithChildren,
     AuthenticatedDashboardReposLayoutRoute:
@@ -1065,8 +1459,6 @@ const AuthenticatedDashboardLayoutRouteChildren: AuthenticatedDashboardLayoutRou
       AuthenticatedDashboardWorkspacePageRoute,
     AuthenticatedDashboardWorkspacesPageRoute:
       AuthenticatedDashboardWorkspacesPageRoute,
-    AuthenticatedDashboardPendingPendingIdPageRoute:
-      AuthenticatedDashboardPendingPendingIdPageRoute,
     AuthenticatedDashboardProjectProjectIdPageRoute:
       AuthenticatedDashboardProjectProjectIdPageRoute,
     AuthenticatedDashboardWorkspaceWorkspaceIdPageRoute:
@@ -1096,7 +1488,44 @@ const AuthenticatedOnboardingLayoutRouteWithChildren =
     AuthenticatedOnboardingLayoutRouteChildren,
   )
 
+interface AuthenticatedSettingsHostsLayoutRouteChildren {
+  AuthenticatedSettingsHostsPageRoute: typeof AuthenticatedSettingsHostsPageRoute
+  AuthenticatedSettingsHostsHostIdPageRoute: typeof AuthenticatedSettingsHostsHostIdPageRoute
+}
+
+const AuthenticatedSettingsHostsLayoutRouteChildren: AuthenticatedSettingsHostsLayoutRouteChildren =
+  {
+    AuthenticatedSettingsHostsPageRoute: AuthenticatedSettingsHostsPageRoute,
+    AuthenticatedSettingsHostsHostIdPageRoute:
+      AuthenticatedSettingsHostsHostIdPageRoute,
+  }
+
+const AuthenticatedSettingsHostsLayoutRouteWithChildren =
+  AuthenticatedSettingsHostsLayoutRoute._addFileChildren(
+    AuthenticatedSettingsHostsLayoutRouteChildren,
+  )
+
+interface AuthenticatedSettingsProjectsLayoutRouteChildren {
+  AuthenticatedSettingsProjectsPageRoute: typeof AuthenticatedSettingsProjectsPageRoute
+  AuthenticatedSettingsProjectsProjectIdPageRoute: typeof AuthenticatedSettingsProjectsProjectIdPageRoute
+}
+
+const AuthenticatedSettingsProjectsLayoutRouteChildren: AuthenticatedSettingsProjectsLayoutRouteChildren =
+  {
+    AuthenticatedSettingsProjectsPageRoute:
+      AuthenticatedSettingsProjectsPageRoute,
+    AuthenticatedSettingsProjectsProjectIdPageRoute:
+      AuthenticatedSettingsProjectsProjectIdPageRoute,
+  }
+
+const AuthenticatedSettingsProjectsLayoutRouteWithChildren =
+  AuthenticatedSettingsProjectsLayoutRoute._addFileChildren(
+    AuthenticatedSettingsProjectsLayoutRouteChildren,
+  )
+
 interface AuthenticatedSettingsLayoutRouteChildren {
+  AuthenticatedSettingsHostsLayoutRoute: typeof AuthenticatedSettingsHostsLayoutRouteWithChildren
+  AuthenticatedSettingsProjectsLayoutRoute: typeof AuthenticatedSettingsProjectsLayoutRouteWithChildren
   AuthenticatedSettingsPageRoute: typeof AuthenticatedSettingsPageRoute
   AuthenticatedSettingsAccountPageRoute: typeof AuthenticatedSettingsAccountPageRoute
   AuthenticatedSettingsAgentsPageRoute: typeof AuthenticatedSettingsAgentsPageRoute
@@ -1104,26 +1533,29 @@ interface AuthenticatedSettingsLayoutRouteChildren {
   AuthenticatedSettingsAppearancePageRoute: typeof AuthenticatedSettingsAppearancePageRoute
   AuthenticatedSettingsBehaviorPageRoute: typeof AuthenticatedSettingsBehaviorPageRoute
   AuthenticatedSettingsBillingPageRoute: typeof AuthenticatedSettingsBillingPageRoute
+  AuthenticatedSettingsExperimentalPageRoute: typeof AuthenticatedSettingsExperimentalPageRoute
   AuthenticatedSettingsGitPageRoute: typeof AuthenticatedSettingsGitPageRoute
   AuthenticatedSettingsIntegrationsPageRoute: typeof AuthenticatedSettingsIntegrationsPageRoute
   AuthenticatedSettingsKeyboardPageRoute: typeof AuthenticatedSettingsKeyboardPageRoute
+  AuthenticatedSettingsLinksPageRoute: typeof AuthenticatedSettingsLinksPageRoute
   AuthenticatedSettingsModelsPageRoute: typeof AuthenticatedSettingsModelsPageRoute
   AuthenticatedSettingsOrganizationPageRoute: typeof AuthenticatedSettingsOrganizationPageRoute
   AuthenticatedSettingsPermissionsPageRoute: typeof AuthenticatedSettingsPermissionsPageRoute
   AuthenticatedSettingsPresetsPageRoute: typeof AuthenticatedSettingsPresetsPageRoute
-  AuthenticatedSettingsProjectsPageRoute: typeof AuthenticatedSettingsProjectsPageRoute
   AuthenticatedSettingsRingtonesPageRoute: typeof AuthenticatedSettingsRingtonesPageRoute
   AuthenticatedSettingsSecurityPageRoute: typeof AuthenticatedSettingsSecurityPageRoute
   AuthenticatedSettingsTerminalPageRoute: typeof AuthenticatedSettingsTerminalPageRoute
   AuthenticatedSettingsBillingPlansPageRoute: typeof AuthenticatedSettingsBillingPlansPageRoute
-  AuthenticatedSettingsProjectProjectIdPageRoute: typeof AuthenticatedSettingsProjectProjectIdPageRoute
   AuthenticatedSettingsProjectProjectIdCloudPageRoute: typeof AuthenticatedSettingsProjectProjectIdCloudPageRoute
-  AuthenticatedSettingsProjectProjectIdGeneralPageRoute: typeof AuthenticatedSettingsProjectProjectIdGeneralPageRoute
   AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute: typeof AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute
 }
 
 const AuthenticatedSettingsLayoutRouteChildren: AuthenticatedSettingsLayoutRouteChildren =
   {
+    AuthenticatedSettingsHostsLayoutRoute:
+      AuthenticatedSettingsHostsLayoutRouteWithChildren,
+    AuthenticatedSettingsProjectsLayoutRoute:
+      AuthenticatedSettingsProjectsLayoutRouteWithChildren,
     AuthenticatedSettingsPageRoute: AuthenticatedSettingsPageRoute,
     AuthenticatedSettingsAccountPageRoute:
       AuthenticatedSettingsAccountPageRoute,
@@ -1136,11 +1568,14 @@ const AuthenticatedSettingsLayoutRouteChildren: AuthenticatedSettingsLayoutRoute
       AuthenticatedSettingsBehaviorPageRoute,
     AuthenticatedSettingsBillingPageRoute:
       AuthenticatedSettingsBillingPageRoute,
+    AuthenticatedSettingsExperimentalPageRoute:
+      AuthenticatedSettingsExperimentalPageRoute,
     AuthenticatedSettingsGitPageRoute: AuthenticatedSettingsGitPageRoute,
     AuthenticatedSettingsIntegrationsPageRoute:
       AuthenticatedSettingsIntegrationsPageRoute,
     AuthenticatedSettingsKeyboardPageRoute:
       AuthenticatedSettingsKeyboardPageRoute,
+    AuthenticatedSettingsLinksPageRoute: AuthenticatedSettingsLinksPageRoute,
     AuthenticatedSettingsModelsPageRoute: AuthenticatedSettingsModelsPageRoute,
     AuthenticatedSettingsOrganizationPageRoute:
       AuthenticatedSettingsOrganizationPageRoute,
@@ -1148,8 +1583,6 @@ const AuthenticatedSettingsLayoutRouteChildren: AuthenticatedSettingsLayoutRoute
       AuthenticatedSettingsPermissionsPageRoute,
     AuthenticatedSettingsPresetsPageRoute:
       AuthenticatedSettingsPresetsPageRoute,
-    AuthenticatedSettingsProjectsPageRoute:
-      AuthenticatedSettingsProjectsPageRoute,
     AuthenticatedSettingsRingtonesPageRoute:
       AuthenticatedSettingsRingtonesPageRoute,
     AuthenticatedSettingsSecurityPageRoute:
@@ -1158,12 +1591,8 @@ const AuthenticatedSettingsLayoutRouteChildren: AuthenticatedSettingsLayoutRoute
       AuthenticatedSettingsTerminalPageRoute,
     AuthenticatedSettingsBillingPlansPageRoute:
       AuthenticatedSettingsBillingPlansPageRoute,
-    AuthenticatedSettingsProjectProjectIdPageRoute:
-      AuthenticatedSettingsProjectProjectIdPageRoute,
     AuthenticatedSettingsProjectProjectIdCloudPageRoute:
       AuthenticatedSettingsProjectProjectIdCloudPageRoute,
-    AuthenticatedSettingsProjectProjectIdGeneralPageRoute:
-      AuthenticatedSettingsProjectProjectIdGeneralPageRoute,
     AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute:
       AuthenticatedSettingsProjectProjectIdCloudSecretsPageRoute,
   }
@@ -1173,10 +1602,53 @@ const AuthenticatedSettingsLayoutRouteWithChildren =
     AuthenticatedSettingsLayoutRouteChildren,
   )
 
+interface AuthenticatedSetupLayoutRouteChildren {
+  AuthenticatedSetupAdoptWorktreesPageRoute: typeof AuthenticatedSetupAdoptWorktreesPageRoute
+  AuthenticatedSetupGhCliPageRoute: typeof AuthenticatedSetupGhCliPageRoute
+  AuthenticatedSetupPermissionsPageRoute: typeof AuthenticatedSetupPermissionsPageRoute
+  AuthenticatedSetupProjectPageRoute: typeof AuthenticatedSetupProjectPageRoute
+  AuthenticatedSetupProvidersPageRoute: typeof AuthenticatedSetupProvidersPageRoute
+  AuthenticatedSetupProvidersClaudeCodePageRoute: typeof AuthenticatedSetupProvidersClaudeCodePageRoute
+  AuthenticatedSetupProvidersCodexPageRoute: typeof AuthenticatedSetupProvidersCodexPageRoute
+  AuthenticatedSetupProvidersClaudeCodeApiKeyPageRoute: typeof AuthenticatedSetupProvidersClaudeCodeApiKeyPageRoute
+  AuthenticatedSetupProvidersClaudeCodeCustomPageRoute: typeof AuthenticatedSetupProvidersClaudeCodeCustomPageRoute
+  AuthenticatedSetupProvidersCodexApiKeyPageRoute: typeof AuthenticatedSetupProvidersCodexApiKeyPageRoute
+  AuthenticatedSetupProvidersCodexCustomPageRoute: typeof AuthenticatedSetupProvidersCodexCustomPageRoute
+}
+
+const AuthenticatedSetupLayoutRouteChildren: AuthenticatedSetupLayoutRouteChildren =
+  {
+    AuthenticatedSetupAdoptWorktreesPageRoute:
+      AuthenticatedSetupAdoptWorktreesPageRoute,
+    AuthenticatedSetupGhCliPageRoute: AuthenticatedSetupGhCliPageRoute,
+    AuthenticatedSetupPermissionsPageRoute:
+      AuthenticatedSetupPermissionsPageRoute,
+    AuthenticatedSetupProjectPageRoute: AuthenticatedSetupProjectPageRoute,
+    AuthenticatedSetupProvidersPageRoute: AuthenticatedSetupProvidersPageRoute,
+    AuthenticatedSetupProvidersClaudeCodePageRoute:
+      AuthenticatedSetupProvidersClaudeCodePageRoute,
+    AuthenticatedSetupProvidersCodexPageRoute:
+      AuthenticatedSetupProvidersCodexPageRoute,
+    AuthenticatedSetupProvidersClaudeCodeApiKeyPageRoute:
+      AuthenticatedSetupProvidersClaudeCodeApiKeyPageRoute,
+    AuthenticatedSetupProvidersClaudeCodeCustomPageRoute:
+      AuthenticatedSetupProvidersClaudeCodeCustomPageRoute,
+    AuthenticatedSetupProvidersCodexApiKeyPageRoute:
+      AuthenticatedSetupProvidersCodexApiKeyPageRoute,
+    AuthenticatedSetupProvidersCodexCustomPageRoute:
+      AuthenticatedSetupProvidersCodexCustomPageRoute,
+  }
+
+const AuthenticatedSetupLayoutRouteWithChildren =
+  AuthenticatedSetupLayoutRoute._addFileChildren(
+    AuthenticatedSetupLayoutRouteChildren,
+  )
+
 interface AuthenticatedLayoutRouteChildren {
   AuthenticatedDashboardLayoutRoute: typeof AuthenticatedDashboardLayoutRouteWithChildren
   AuthenticatedOnboardingLayoutRoute: typeof AuthenticatedOnboardingLayoutRouteWithChildren
   AuthenticatedSettingsLayoutRoute: typeof AuthenticatedSettingsLayoutRouteWithChildren
+  AuthenticatedSetupLayoutRoute: typeof AuthenticatedSetupLayoutRouteWithChildren
 }
 
 const AuthenticatedLayoutRouteChildren: AuthenticatedLayoutRouteChildren = {
@@ -1186,6 +1658,7 @@ const AuthenticatedLayoutRouteChildren: AuthenticatedLayoutRouteChildren = {
     AuthenticatedOnboardingLayoutRouteWithChildren,
   AuthenticatedSettingsLayoutRoute:
     AuthenticatedSettingsLayoutRouteWithChildren,
+  AuthenticatedSetupLayoutRoute: AuthenticatedSetupLayoutRouteWithChildren,
 }
 
 const AuthenticatedLayoutRouteWithChildren =

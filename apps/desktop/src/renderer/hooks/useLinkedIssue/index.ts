@@ -1,1 +1,1 @@
-export { useLinkedIssue, type LinkedIssue } from "./useLinkedIssue";
+export { type LinkedIssue, useLinkedIssue } from "./useLinkedIssue";

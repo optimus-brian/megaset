@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@superset/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@superset/ui/card";
 import { Collapsible, CollapsibleContent } from "@superset/ui/collapsible";
 import { Label } from "@superset/ui/label";
 import {
@@ -9,13 +15,13 @@ import {
 	SelectValue,
 } from "@superset/ui/select";
 import { Switch } from "@superset/ui/switch";
-import { ChevronDownIcon } from "lucide-react";
-import { useState } from "react";
-import { HiOutlineSparkles } from "react-icons/hi2";
 import {
 	type StatusBarVisibility,
 	useClaudeSdkSettingsStore,
 } from "fork/claude-sdk/settings-store";
+import { ChevronDownIcon } from "lucide-react";
+import { useState } from "react";
+import { HiOutlineSparkles } from "react-icons/hi2";
 
 const MODEL_OPTIONS = [
 	{ value: "default", label: "Default (auto)" },
@@ -45,15 +51,47 @@ const STATUS_BAR_FIELDS: Array<{
 }> = [
 	{ key: "model", label: "Model selector", hint: "Pill to switch model" },
 	{ key: "effort", label: "Effort selector", hint: "Pill to switch effort" },
-	{ key: "permission", label: "Permission selector", hint: "Pill to switch permission mode" },
-	{ key: "activeModel", label: "Active model name", hint: "Live model used by SDK" },
-	{ key: "contextRing", label: "Context ring", hint: "Color ring showing context fill" },
-	{ key: "contextDetail", label: "Context detail", hint: "Numeric tokens / context window" },
-	{ key: "totalTokens", label: "Total tokens (⇅)", hint: "Sum of input + output + cache" },
-	{ key: "outputTokens", label: "Output tokens (↓)", hint: "Output tokens this turn" },
-	{ key: "cacheTokens", label: "Cache read tokens (⊙)", hint: "Cached prefix tokens" },
+	{
+		key: "permission",
+		label: "Permission selector",
+		hint: "Pill to switch permission mode",
+	},
+	{
+		key: "activeModel",
+		label: "Active model name",
+		hint: "Live model used by SDK",
+	},
+	{
+		key: "contextRing",
+		label: "Context ring",
+		hint: "Color ring showing context fill",
+	},
+	{
+		key: "contextDetail",
+		label: "Context detail",
+		hint: "Numeric tokens / context window",
+	},
+	{
+		key: "totalTokens",
+		label: "Total tokens (⇅)",
+		hint: "Sum of input + output + cache",
+	},
+	{
+		key: "outputTokens",
+		label: "Output tokens (↓)",
+		hint: "Output tokens this turn",
+	},
+	{
+		key: "cacheTokens",
+		label: "Cache read tokens (⊙)",
+		hint: "Cached prefix tokens",
+	},
 	{ key: "cost", label: "Session cost ($)", hint: "Total USD spent" },
-	{ key: "duration", label: "Last turn duration", hint: "Wall-clock for last turn" },
+	{
+		key: "duration",
+		label: "Last turn duration",
+		hint: "Wall-clock for last turn",
+	},
 	{ key: "turns", label: "Turn count", hint: "Number of turns in session" },
 	{ key: "cwd", label: "Working directory", hint: "Current cwd path" },
 ];
@@ -141,7 +179,11 @@ export function ClaudeSdkAgentCard() {
 										</SelectTrigger>
 										<SelectContent>
 											{MODEL_OPTIONS.map((m) => (
-												<SelectItem key={m.value} value={m.value} className="text-xs">
+												<SelectItem
+													key={m.value}
+													value={m.value}
+													className="text-xs"
+												>
 													{m.label}
 												</SelectItem>
 											))}
@@ -170,7 +212,11 @@ export function ClaudeSdkAgentCard() {
 										</SelectTrigger>
 										<SelectContent>
 											{EFFORT_OPTIONS.map((e) => (
-												<SelectItem key={e.value} value={e.value} className="text-xs">
+												<SelectItem
+													key={e.value}
+													value={e.value}
+													className="text-xs"
+												>
 													{e.label}
 												</SelectItem>
 											))}
@@ -197,7 +243,11 @@ export function ClaudeSdkAgentCard() {
 										</SelectTrigger>
 										<SelectContent>
 											{PERMISSION_OPTIONS.map((p) => (
-												<SelectItem key={p.value} value={p.value} className="text-xs">
+												<SelectItem
+													key={p.value}
+													value={p.value}
+													className="text-xs"
+												>
 													{p.label}
 												</SelectItem>
 											))}
@@ -213,7 +263,8 @@ export function ClaudeSdkAgentCard() {
 								<div>
 									<h4 className="text-sm font-medium">Status bar fields</h4>
 									<p className="text-xs text-muted-foreground mt-0.5">
-										Toggle which fields appear in the status bar at the bottom of the SDK pane.
+										Toggle which fields appear in the status bar at the bottom
+										of the SDK pane.
 									</p>
 								</div>
 								<button

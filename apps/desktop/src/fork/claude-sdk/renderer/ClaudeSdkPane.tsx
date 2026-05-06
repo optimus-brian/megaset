@@ -4,9 +4,18 @@ import {
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
-	SelectValue,
 } from "@superset/ui/select";
 import { toast } from "@superset/ui/sonner";
+import {
+	type Turn,
+	type UsageState,
+	useClaudeSdkConversationStore,
+} from "fork/claude-sdk/renderer/conversation-store";
+import { useClaudeSdkPendingLaunchStore } from "fork/claude-sdk/renderer/pending-launch";
+import {
+	type StatusBarVisibility,
+	useClaudeSdkSettingsStore,
+} from "fork/claude-sdk/settings-store";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	HiOutlineArrowTopRightOnSquare,
@@ -20,16 +29,6 @@ import {
 	HiOutlineXMark,
 } from "react-icons/hi2";
 import { LuSquare } from "react-icons/lu";
-import {
-	type Turn,
-	type UsageState,
-	useClaudeSdkConversationStore,
-} from "fork/claude-sdk/renderer/conversation-store";
-import { useClaudeSdkPendingLaunchStore } from "fork/claude-sdk/renderer/pending-launch";
-import {
-	type StatusBarVisibility,
-	useClaudeSdkSettingsStore,
-} from "fork/claude-sdk/settings-store";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { Streamdown } from "streamdown";
@@ -64,10 +63,7 @@ function stripDataUrlPrefix(dataUrl: string): string {
  * Extract a file path from a Claude Agent SDK tool invocation so the UI can
  * offer "open / reveal" actions. Returns null if the tool has no file arg.
  */
-function extractFilePath(
-	toolName: string,
-	input: unknown,
-): string | null {
+function extractFilePath(toolName: string, input: unknown): string | null {
 	if (!input || typeof input !== "object") return null;
 	const o = input as Record<string, unknown>;
 	const pick = (...keys: string[]): string | null => {
@@ -111,7 +107,10 @@ function resolveAbsolutePath(
 	return `${cwd}${sep}${filePath}`;
 }
 
-function isPathWithinCwd(absolutePath: string, cwd: string | undefined): boolean {
+function isPathWithinCwd(
+	absolutePath: string,
+	cwd: string | undefined,
+): boolean {
 	if (!cwd) return false;
 	const normalizedCwd = cwd.endsWith("/") ? cwd.slice(0, -1) : cwd;
 	return (
@@ -178,7 +177,21 @@ function formatPath(path: string): string {
 	return path;
 }
 
-export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
+export function ClaudeSdkPane(props: ClaudeSdkPaneProps) {
+	const enabled = useClaudeSdkSettingsStore((s) => s.enabled);
+	if (!enabled) {
+		return (
+			<div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground gap-2 p-6 text-center">
+				<HiOutlineSparkles className="size-10 opacity-30" />
+				<p className="font-medium">Claude SDK is disabled</p>
+				<p className="text-xs">Enable it in Settings → Agents → Claude SDK.</p>
+			</div>
+		);
+	}
+	return <ClaudeSdkPaneInner {...props} />;
+}
+
+function ClaudeSdkPaneInner({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 	const { data: workspace } = electronTrpc.workspaces.get.useQuery(
 		{ id: workspaceId },
 		{ enabled: !!workspaceId },
@@ -219,8 +232,7 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 		[paneId, patchConversation],
 	);
 	const setActiveModel = useCallback(
-		(value: string | null) =>
-			patchConversation(paneId, { activeModel: value }),
+		(value: string | null) => patchConversation(paneId, { activeModel: value }),
 		[paneId, patchConversation],
 	);
 	const setInput = useCallback(
@@ -250,17 +262,6 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 		sdkSettings.defaultPermission,
 	);
 
-	if (!sdkSettings.enabled) {
-		return (
-			<div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground gap-2 p-6 text-center">
-				<HiOutlineSparkles className="size-10 opacity-30" />
-				<p className="font-medium">Claude SDK is disabled</p>
-				<p className="text-xs">
-					Enable it in Settings → Agents → Claude SDK.
-				</p>
-			</div>
-		);
-	}
 	const scrollRef = useRef<HTMLDivElement>(null);
 
 	const startSession = electronTrpc.claudeSdk.startSession.useMutation();
@@ -278,8 +279,7 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 		() =>
 			useClaudeSdkConversationStore.getState().conversations[paneId]
 				?.lastAppliedSeq ?? 0,
-		// biome-ignore lint/correctness/useExhaustiveDependencies: only recapture when the pane or session identity changes
-		[paneId, sessionId],
+		[paneId],
 	);
 	electronTrpc.claudeSdk.events.useSubscription(
 		sessionId
@@ -337,8 +337,7 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 						setTurns((prev) => {
 							const next = [...prev];
 							const idx = next.findIndex(
-								(t) =>
-									t.kind === "thinking" && t.messageId === event.messageId,
+								(t) => t.kind === "thinking" && t.messageId === event.messageId,
 							);
 							if (idx >= 0) {
 								const existing = next[idx] as Extract<
@@ -362,7 +361,9 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 					}
 					case "tool.use":
 						setTurns((prev) => {
-							if (prev.some((t) => t.kind === "tool" && t.id === event.toolUseId)) {
+							if (
+								prev.some((t) => t.kind === "tool" && t.id === event.toolUseId)
+							) {
 								return prev;
 							}
 							return [
@@ -475,7 +476,7 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 		const el = scrollRef.current;
 		if (!el) return;
 		el.scrollTop = el.scrollHeight;
-	}, [turns.length]);
+	}, []);
 
 	useEffect(() => {
 		if (resumeHydrated) return;
@@ -670,12 +671,7 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 						...(model !== "default" ? { model } : {}),
 						...(effort !== "default"
 							? {
-									effort: effort as
-										| "low"
-										| "medium"
-										| "high"
-										| "xhigh"
-										| "max",
+									effort: effort as "low" | "medium" | "high" | "xhigh" | "max",
 								}
 							: {}),
 						permissionMode: effectivePermission as
@@ -706,6 +702,10 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 		permissionMode,
 		startSession,
 		sendMessage,
+		setInput,
+		setRunning,
+		setSessionId,
+		setTurns,
 	]);
 
 	const handleApprove = (approvalId: string, decision: "allow" | "deny") => {
@@ -747,8 +747,7 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 
 	const addFileViewerPane = useTabsStore((s) => s.addFileViewerPane);
 	const openInFinder = electronTrpc.external.openInFinder.useMutation();
-	const openFileInEditor =
-		electronTrpc.external.openFileInEditor.useMutation();
+	const openFileInEditor = electronTrpc.external.openFileInEditor.useMutation();
 	const trpcUtils = electronTrpc.useUtils();
 
 	const fileActions = useMemo(
@@ -842,11 +841,7 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 		if (sessionId) {
 			updatePermissionMode.mutate({
 				sessionId,
-				mode: v as
-					| "default"
-					| "acceptEdits"
-					| "bypassPermissions"
-					| "plan",
+				mode: v as "default" | "acceptEdits" | "bypassPermissions" | "plan",
 			});
 		}
 	};
@@ -862,7 +857,7 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 		return Math.min(100, (usage.contextTokens / usage.contextWindow) * 100);
 	}, [usage]);
 
-	const contextColor = useMemo(() => {
+	const _contextColor = useMemo(() => {
 		if (contextPct < 50) return "bg-green-500";
 		if (contextPct < 80) return "bg-amber-500";
 		return "bg-red-500";
@@ -889,11 +884,14 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 							) : (
 								<p>Send a message to start a Claude session.</p>
 							)}
-							<p className="mt-1 opacity-60 font-mono">{formatPath(cwd) || "—"}</p>
+							<p className="mt-1 opacity-60 font-mono">
+								{formatPath(cwd) || "—"}
+							</p>
 						</div>
 					)}
 					{turns.map((turn, idx) => (
 						<TurnView
+							// biome-ignore lint/suspicious/noArrayIndexKey: turns are append-only, idx is stable for the lifetime of a turn
 							key={idx}
 							turn={turn}
 							onApprove={handleApprove}
@@ -911,11 +909,10 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 			</div>
 
 			{/* Input area — full width */}
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: drop-zone wrapper; keyboard users have the file-picker button below */}
 			<div
 				className={`border-t border-border p-3 transition-colors ${
-					dragOver
-						? "bg-primary/10 ring-1 ring-primary/40"
-						: "bg-muted/10"
+					dragOver ? "bg-primary/10 ring-1 ring-primary/40" : "bg-muted/10"
 				}`}
 				onDragOver={handleDragOver}
 				onDragLeave={handleDragLeave}
@@ -1058,8 +1055,7 @@ function StatusBar({
 	const items: React.ReactNode[] = [];
 	const sep = <PillSeparator />;
 	const push = (key: string, node: React.ReactNode) => {
-		if (items.length > 0)
-			items.push(<span key={`sep-${key}`}>{sep}</span>);
+		if (items.length > 0) items.push(<span key={`sep-${key}`}>{sep}</span>);
 		items.push(<span key={key}>{node}</span>);
 	};
 
@@ -1271,9 +1267,7 @@ function ContextRing({ pct }: { pct: number }) {
 }
 
 function PillSeparator() {
-	return (
-		<span className="text-border/60 select-none shrink-0">│</span>
-	);
+	return <span className="text-border/60 select-none shrink-0">│</span>;
 }
 
 function PillSelect({
@@ -1342,8 +1336,12 @@ function TurnView({
 				<div className="text-sm prose prose-sm dark:prose-invert max-w-none">
 					<Streamdown
 						components={{
-							a: (props) => <AssistantLink {...props} fileActions={fileActions} />,
-							code: (props) => <AssistantCode {...props} fileActions={fileActions} />,
+							a: (props) => (
+								<AssistantLink {...props} fileActions={fileActions} />
+							),
+							code: (props) => (
+								<AssistantCode {...props} fileActions={fileActions} />
+							),
 						}}
 					>
 						{turn.text}
@@ -1451,8 +1449,7 @@ function AssistantCode({
 	const text =
 		typeof children === "string"
 			? children
-			: Array.isArray(children) &&
-					children.every((c) => typeof c === "string")
+			: Array.isArray(children) && children.every((c) => typeof c === "string")
 				? children.join("")
 				: null;
 
@@ -1526,9 +1523,14 @@ function ToolBlock({
 	);
 	const canViewFile =
 		filePath &&
-		["Read", "Write", "Edit", "MultiEdit", "NotebookEdit", "NotebookRead"].includes(
-			turn.name,
-		);
+		[
+			"Read",
+			"Write",
+			"Edit",
+			"MultiEdit",
+			"NotebookEdit",
+			"NotebookRead",
+		].includes(turn.name);
 	const fileLabel = filePath ? formatPath(filePath) : null;
 
 	return (
@@ -1809,8 +1811,7 @@ function AskUserQuestionPicker({
 		return null;
 	}
 
-	const hasAnswer =
-		activePicked.size > 0 || activeCustom.trim().length > 0;
+	const hasAnswer = activePicked.size > 0 || activeCustom.trim().length > 0;
 	const isLast = activeIdx + 1 >= questions.length;
 
 	return (
@@ -1835,7 +1836,9 @@ function AskUserQuestionPicker({
 				<div className="text-sm font-medium">{activeQuestion.question}</div>
 				{isMulti && (
 					<p className="text-[11px] text-muted-foreground/70">
-						Select one or more. Press <kbd className="rounded bg-muted/60 px-1 font-mono">Enter</kbd> when done.
+						Select one or more. Press{" "}
+						<kbd className="rounded bg-muted/60 px-1 font-mono">Enter</kbd> when
+						done.
 					</p>
 				)}
 				<div className="space-y-1">

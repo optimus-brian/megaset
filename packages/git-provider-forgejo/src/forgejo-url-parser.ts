@@ -25,10 +25,7 @@ export function parseForgejoRemote(
 	const escapedHost = h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 	const patterns: RegExp[] = [
-		new RegExp(
-			`^git@${escapedHost}:([^/\\s]+)/([^/\\s]+?)(?:\\.git)?$`,
-			"i",
-		),
+		new RegExp(`^git@${escapedHost}:([^/\\s]+)/([^/\\s]+?)(?:\\.git)?$`, "i"),
 		new RegExp(
 			`^ssh://git@${escapedHost}(?::\\d+)?/([^/\\s]+)/([^/\\s]+?)(?:\\.git)?$`,
 			"i",

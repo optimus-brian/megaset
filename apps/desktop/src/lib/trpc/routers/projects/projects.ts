@@ -44,7 +44,10 @@ import {
 	refreshDefaultBranch,
 	sanitizeAuthorPrefix,
 } from "../workspaces/utils/git";
-import { getSimpleGitWithShellPath } from "../workspaces/utils/git-client";
+import {
+	execGitWithShellPath,
+	getSimpleGitWithShellPath,
+} from "../workspaces/utils/git-client";
 import { execWithShellEnv } from "../workspaces/utils/shell-env";
 import { getDefaultProjectColor } from "./utils/colors";
 import { discoverAndSaveProjectIcon } from "./utils/favicon-discovery";
@@ -449,8 +452,7 @@ export const createProjectsRouter = (getWindow: () => BrowserWindow | null) => {
 
 				let remoteUrl: string;
 				try {
-					const { stdout } = await execWithShellEnv(
-						"git",
+					const { stdout } = await execGitWithShellPath(
 						["remote", "get-url", "origin"],
 						{ cwd: project.mainRepoPath, timeout: 5000 },
 					);

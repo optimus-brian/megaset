@@ -1,8 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-	canHandleForgejoUrl,
-	parseForgejoRemote,
-} from "./forgejo-url-parser";
+import { canHandleForgejoUrl, parseForgejoRemote } from "./forgejo-url-parser";
 
 describe("parseForgejoRemote", () => {
 	const host = "forgejo.example.com";
@@ -39,10 +36,7 @@ describe("parseForgejoRemote", () => {
 
 	it("ignores trailing query string", () => {
 		expect(
-			parseForgejoRemote(
-				"https://forgejo.example.com/foo/bar?ref=main",
-				host,
-			),
+			parseForgejoRemote("https://forgejo.example.com/foo/bar?ref=main", host),
 		).toEqual({ owner: "foo", repo: "bar" });
 	});
 
@@ -62,9 +56,7 @@ describe("parseForgejoRemote", () => {
 	});
 
 	it("rejects different host", () => {
-		expect(
-			parseForgejoRemote("https://github.com/foo/bar", host),
-		).toBeNull();
+		expect(parseForgejoRemote("https://github.com/foo/bar", host)).toBeNull();
 	});
 
 	it("rejects when host is empty", () => {
@@ -92,10 +84,7 @@ describe("canHandleForgejoUrl", () => {
 
 	it("returns false for non-matching host", () => {
 		expect(
-			canHandleForgejoUrl(
-				"https://github.com/foo/bar",
-				"forgejo.example.com",
-			),
+			canHandleForgejoUrl("https://github.com/foo/bar", "forgejo.example.com"),
 		).toBe(false);
 	});
 });

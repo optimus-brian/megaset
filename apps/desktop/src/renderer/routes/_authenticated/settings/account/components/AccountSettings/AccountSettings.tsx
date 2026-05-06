@@ -12,12 +12,12 @@ import {
 	getImageExtensionFromMimeType,
 	parseBase64DataUrl,
 } from "shared/file-types";
-import { useSettingsSections } from "../../../utils/settings-section-registry";
 import {
 	isItemVisible,
 	SETTING_ITEM_ID,
 	type SettingItemId,
 } from "../../../utils/settings-search";
+import { useSettingsSections } from "../../../utils/settings-section-registry";
 import { ProfileSkeleton } from "./components/ProfileSkeleton";
 
 interface AccountSettingsProps {
@@ -157,7 +157,9 @@ export function AccountSettings({ visibleItems }: AccountSettingsProps) {
 					))}
 
 				{forkSections.length > 0 && (
-					<div className={showProfile ? "pt-6 border-t space-y-6" : "space-y-6"}>
+					<div
+						className={showProfile ? "pt-6 border-t space-y-6" : "space-y-6"}
+					>
 						{forkSections.map((section) => (
 							<div key={section.id}>{section.render()}</div>
 						))}

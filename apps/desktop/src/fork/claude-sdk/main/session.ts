@@ -8,8 +8,8 @@ import {
 	type CanUseTool,
 	type Options as ClaudeQueryOptions,
 	type PermissionMode,
-	query,
 	type Query,
+	query,
 	type SDKMessage,
 	type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
@@ -82,11 +82,15 @@ class AsyncQueue<T> {
 	[Symbol.asyncIterator](): AsyncIterator<T> {
 		return {
 			next: (): Promise<IteratorResult<T>> => {
-				if (this.buffer.length) {
-					return Promise.resolve({ value: this.buffer.shift()!, done: false });
+				const head = this.buffer.shift();
+				if (head !== undefined) {
+					return Promise.resolve({ value: head, done: false });
 				}
 				if (this.closed) {
-					return Promise.resolve({ value: undefined as unknown as T, done: true });
+					return Promise.resolve({
+						value: undefined as unknown as T,
+						done: true,
+					});
 				}
 				return new Promise<IteratorResult<T>>((resolve) => {
 					this.waiters.push(resolve);
