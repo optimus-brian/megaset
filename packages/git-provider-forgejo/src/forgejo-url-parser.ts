@@ -34,7 +34,7 @@ export function parseForgejoRemote(
 			"i",
 		),
 		new RegExp(
-			`^https?://${escapedHost}(?::\\d+)?/([^/\\s?#]+)/([^/\\s?#]+?)(?:\\.git)?(?:[?#].*)?$`,
+			`^https?://(?:[^/@\\s]+@)?${escapedHost}(?::\\d+)?/([^/\\s?#]+)/([^/\\s?#]+?)(?:\\.git)?(?:[?#].*)?$`,
 			"i",
 		),
 	];

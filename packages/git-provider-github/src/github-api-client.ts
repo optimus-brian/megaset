@@ -25,7 +25,9 @@ type RawIssue = {
 	};
 };
 
-function parentNumberFromUrl(url: string | null | undefined): number | undefined {
+function parentNumberFromUrl(
+	url: string | null | undefined,
+): number | undefined {
 	if (!url) return undefined;
 	const match = url.match(/\/issues\/(\d+)$/);
 	if (!match) return undefined;
@@ -82,7 +84,11 @@ function mapIssue(owner: string, repo: string, i: RawIssue): Issue {
 				? "in_progress"
 				: "open";
 	const stateName =
-		state === "closed" ? "Closed" : state === "in_progress" ? "In Progress" : "Open";
+		state === "closed"
+			? "Closed"
+			: state === "in_progress"
+				? "In Progress"
+				: "Open";
 	return {
 		id: `gh:${owner}/${repo}#${i.number}`,
 		provider: "github",

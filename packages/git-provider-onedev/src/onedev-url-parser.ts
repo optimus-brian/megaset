@@ -31,7 +31,7 @@ export function parseOnedevRemote(
 			"i",
 		),
 		new RegExp(
-			`^https?://${escapedHost}(?::\\d+)?/([^\\s?#]+?)(?:\\.git)?(?:[?#].*)?$`,
+			`^https?://(?:[^/@\\s]+@)?${escapedHost}(?::\\d+)?/([^\\s?#]+?)(?:\\.git)?(?:[?#].*)?$`,
 			"i",
 		),
 	];

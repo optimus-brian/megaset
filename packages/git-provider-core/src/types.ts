@@ -126,10 +126,7 @@ export interface IssueProvider {
 		state: "open" | "closed";
 	}): Promise<Issue>;
 	/** Optional: list sub-issues of a parent issue. */
-	listSubIssues?(opts: {
-		remoteUrl: string;
-		number: number;
-	}): Promise<Issue[]>;
+	listSubIssues?(opts: { remoteUrl: string; number: number }): Promise<Issue[]>;
 	/** Optional: list the full set of states available for this repo. */
 	listIssueStates?(opts: { remoteUrl: string }): Promise<IssueState[]>;
 	/** Optional: set an issue to a specific provider state by id. */
