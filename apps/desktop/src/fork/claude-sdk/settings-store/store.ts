@@ -69,7 +69,7 @@ export const useClaudeSdkSettingsStore = create<ClaudeSdkSettingsState>()(
 				enabled: true,
 				defaultModel: "default",
 				defaultEffort: "default",
-				defaultPermission: "default",
+				defaultPermission: "bypassPermissions",
 				statusBar: DEFAULT_STATUS_BAR,
 
 				setEnabled: (v) => set({ enabled: v }),

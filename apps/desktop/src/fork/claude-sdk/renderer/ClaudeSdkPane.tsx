@@ -20,6 +20,11 @@ import {
 	HiOutlineXMark,
 } from "react-icons/hi2";
 import { LuSquare } from "react-icons/lu";
+import {
+	type Turn,
+	type UsageState,
+	useClaudeSdkConversationStore,
+} from "fork/claude-sdk/renderer/conversation-store";
 import { useClaudeSdkPendingLaunchStore } from "fork/claude-sdk/renderer/pending-launch";
 import {
 	type StatusBarVisibility,
@@ -33,26 +38,6 @@ interface ClaudeSdkPaneProps {
 	paneId: string;
 	workspaceId: string;
 }
-
-type Turn =
-	| { kind: "user"; text: string }
-	| { kind: "assistant"; text: string }
-	| { kind: "thinking"; text: string }
-	| {
-			kind: "tool";
-			id: string;
-			name: string;
-			input: unknown;
-			resultText?: string;
-			isError?: boolean;
-	  }
-	| {
-			kind: "approval";
-			approvalId: string;
-			toolName: string;
-			input: Record<string, unknown>;
-			resolved?: "allow" | "deny";
-	  };
 
 interface Attachment {
 	id: string;
@@ -139,20 +124,12 @@ function isPathWithinCwd(absolutePath: string, cwd: string | undefined): boolean
 // `claudeSdk.getResumeId` / `claudeSdk.setResumeId` tRPC endpoints. File-backed
 // storage there writes synchronously on every change — unlike Chromium's
 // localStorage which flushes lazily and loses pending writes when the app is
-// killed (e.g. during app updates).
+// killed (e.g. during app updates). Turns/usage/sessionId survive pane
+// remounts via `useClaudeSdkConversationStore` (in-memory).
 
-type UsageState = {
-	inputTokens: number;
-	outputTokens: number;
-	cacheReadTokens: number;
-	cacheCreationTokens: number;
-	totalTokens: number;
-	contextTokens: number;
-	contextWindow: number;
-	costUsd?: number;
-	durationMs?: number;
-	numTurns?: number;
-};
+// Stable empty-turns reference so the selector fallback doesn't produce a new
+// array each render (which would invalidate memoized consumers).
+const EMPTY_TURNS: Turn[] = [];
 
 const MODEL_OPTIONS = [
 	{ value: "default", label: "Default", short: "auto" },
@@ -211,17 +188,62 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 	const sdkSettings = useClaudeSdkSettingsStore();
 	const statusBarVisibility = sdkSettings.statusBar;
 
-	const [sessionId, setSessionId] = useState<string | null>(null);
+	// Per-pane conversation state is kept in a Zustand store so the pane keeps
+	// its turns, session, usage, etc. when the user navigates away and back.
+	const conversation = useClaudeSdkConversationStore(
+		(s) => s.conversations[paneId],
+	);
+	const patchConversation = useClaudeSdkConversationStore((s) => s.patch);
+	const updateTurnsInStore = useClaudeSdkConversationStore(
+		(s) => s.updateTurns,
+	);
+	const resetConversation = useClaudeSdkConversationStore((s) => s.reset);
+
+	const sessionId = conversation?.sessionId ?? null;
+	const turns = conversation?.turns ?? EMPTY_TURNS;
+	const running = conversation?.running ?? false;
+	const usage = conversation?.usage ?? null;
+	const activeModel = conversation?.activeModel ?? null;
+	const input = conversation?.inputDraft ?? "";
+
+	const setSessionId = useCallback(
+		(value: string | null) => patchConversation(paneId, { sessionId: value }),
+		[paneId, patchConversation],
+	);
+	const setRunning = useCallback(
+		(value: boolean) => patchConversation(paneId, { running: value }),
+		[paneId, patchConversation],
+	);
+	const setUsage = useCallback(
+		(value: UsageState | null) => patchConversation(paneId, { usage: value }),
+		[paneId, patchConversation],
+	);
+	const setActiveModel = useCallback(
+		(value: string | null) =>
+			patchConversation(paneId, { activeModel: value }),
+		[paneId, patchConversation],
+	);
+	const setInput = useCallback(
+		(value: string) => patchConversation(paneId, { inputDraft: value }),
+		[paneId, patchConversation],
+	);
+	const setTurns = useCallback(
+		(value: Turn[] | ((prev: Turn[]) => Turn[])) => {
+			updateTurnsInStore(
+				paneId,
+				typeof value === "function" ? value : () => value,
+			);
+		},
+		[paneId, updateTurnsInStore],
+	);
+
 	const [resumeSessionId, setResumeSessionId] = useState<string | null>(null);
 	const [resumeHydrated, setResumeHydrated] = useState(false);
 	const resumeIdQuery = electronTrpc.claudeSdk.getResumeId.useQuery({ paneId });
 	const setResumeIdMutation = electronTrpc.claudeSdk.setResumeId.useMutation();
-	const [turns, setTurns] = useState<Turn[]>([]);
-	const [input, setInput] = useState("");
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
 	const [dragOver, setDragOver] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const [running, setRunning] = useState(false);
 	const [model, setModel] = useState<string>(sdkSettings.defaultModel);
 	const [effort, setEffort] = useState<string>(sdkSettings.defaultEffort);
 	const [permissionMode, setPermissionMode] = useState<string>(
@@ -239,8 +261,6 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 			</div>
 		);
 	}
-	const [usage, setUsage] = useState<UsageState | null>(null);
-	const [activeModel, setActiveModel] = useState<string | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
 
 	const startSession = electronTrpc.claudeSdk.startSession.useMutation();
@@ -250,47 +270,115 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 	const updatePermissionMode =
 		electronTrpc.claudeSdk.setPermissionMode.useMutation();
 
+	// `sinceSeq` is read once per session change — not every event — so the
+	// subscription doesn't churn on each incoming event. The backend replays
+	// events with seq > sinceSeq on (re)connect; a fresh session starts at
+	// lastAppliedSeq=0 which gets every event.
+	const sinceSeqForSubscription = useMemo(
+		() =>
+			useClaudeSdkConversationStore.getState().conversations[paneId]
+				?.lastAppliedSeq ?? 0,
+		// biome-ignore lint/correctness/useExhaustiveDependencies: only recapture when the pane or session identity changes
+		[paneId, sessionId],
+	);
 	electronTrpc.claudeSdk.events.useSubscription(
-		sessionId ? { sessionId } : (undefined as never),
+		sessionId
+			? { sessionId, sinceSeq: sinceSeqForSubscription }
+			: (undefined as never),
 		{
 			enabled: !!sessionId,
 			onData: (event) => {
-				setTurns((prev) => {
-					const next = [...prev];
-					switch (event.type) {
-						case "assistant.text": {
-							const last = next[next.length - 1];
-							if (last && last.kind === "assistant") {
-								next[next.length - 1] = {
-									...last,
-									text: last.text + event.text,
+				// Dedupe: replay may re-emit events we already applied. Events
+				// arrive in emission order so a simple "> lastAppliedSeq" check
+				// is enough.
+				const store = useClaudeSdkConversationStore.getState();
+				const current = store.conversations[paneId];
+				if (current && event.seq <= current.lastAppliedSeq) {
+					return;
+				}
+				store.patch(paneId, {
+					lastAppliedSeq: Math.max(current?.lastAppliedSeq ?? 0, event.seq),
+				});
+
+				switch (event.type) {
+					case "assistant.text": {
+						// Group by messageId: multiple text blocks from the same SDK
+						// message fold into a single bubble, but separate messages
+						// stay as separate bubbles. This is the same pattern t3code
+						// uses in its client-side store (keyed by messageId, not
+						// "append to last assistant").
+						setTurns((prev) => {
+							const next = [...prev];
+							const idx = next.findIndex(
+								(t) =>
+									t.kind === "assistant" && t.messageId === event.messageId,
+							);
+							if (idx >= 0) {
+								const existing = next[idx] as Extract<
+									Turn,
+									{ kind: "assistant" }
+								>;
+								next[idx] = {
+									...existing,
+									text: existing.text + event.text,
 								};
 							} else {
-								next.push({ kind: "assistant", text: event.text });
+								next.push({
+									kind: "assistant",
+									messageId: event.messageId,
+									text: event.text,
+								});
 							}
 							return next;
-						}
-						case "assistant.thinking": {
-							const last = next[next.length - 1];
-							if (last && last.kind === "thinking") {
-								next[next.length - 1] = {
-									...last,
-									text: last.text + event.text,
+						});
+						return;
+					}
+					case "assistant.thinking": {
+						setTurns((prev) => {
+							const next = [...prev];
+							const idx = next.findIndex(
+								(t) =>
+									t.kind === "thinking" && t.messageId === event.messageId,
+							);
+							if (idx >= 0) {
+								const existing = next[idx] as Extract<
+									Turn,
+									{ kind: "thinking" }
+								>;
+								next[idx] = {
+									...existing,
+									text: existing.text + event.text,
 								};
 							} else {
-								next.push({ kind: "thinking", text: event.text });
+								next.push({
+									kind: "thinking",
+									messageId: event.messageId,
+									text: event.text,
+								});
 							}
 							return next;
-						}
-						case "tool.use":
-							next.push({
-								kind: "tool",
-								id: event.toolUseId,
-								name: event.toolName,
-								input: event.input,
-							});
-							return next;
-						case "tool.result": {
+						});
+						return;
+					}
+					case "tool.use":
+						setTurns((prev) => {
+							if (prev.some((t) => t.kind === "tool" && t.id === event.toolUseId)) {
+								return prev;
+							}
+							return [
+								...prev,
+								{
+									kind: "tool",
+									id: event.toolUseId,
+									name: event.toolName,
+									input: event.input,
+								},
+							];
+						});
+						return;
+					case "tool.result":
+						setTurns((prev) => {
+							const next = [...prev];
 							for (let i = next.length - 1; i >= 0; i--) {
 								const t = next[i];
 								if (t.kind === "tool" && t.id === event.toolUseId) {
@@ -306,16 +394,32 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 								}
 							}
 							return next;
-						}
-						case "approval.requested":
-							next.push({
-								kind: "approval",
-								approvalId: event.approvalId,
-								toolName: event.toolName,
-								input: event.input,
-							});
-							return next;
-						case "approval.resolved": {
+						});
+						return;
+					case "approval.requested":
+						setTurns((prev) => {
+							if (
+								prev.some(
+									(t) =>
+										t.kind === "approval" && t.approvalId === event.approvalId,
+								)
+							) {
+								return prev;
+							}
+							return [
+								...prev,
+								{
+									kind: "approval",
+									approvalId: event.approvalId,
+									toolName: event.toolName,
+									input: event.input,
+								},
+							];
+						});
+						return;
+					case "approval.resolved":
+						setTurns((prev) => {
+							const next = [...prev];
 							for (let i = next.length - 1; i >= 0; i--) {
 								const t = next[i];
 								if (
@@ -327,30 +431,38 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 								}
 							}
 							return next;
-						}
-						case "turn.completed":
-							setRunning(false);
-							if (event.usage) setUsage(event.usage);
-							if (event.resumeSessionId)
-								setResumeSessionId(event.resumeSessionId);
-							return next;
-						case "usage.updated":
-							setUsage(event.usage);
-							return next;
-						case "model.info":
-							setActiveModel(event.model);
-							return next;
-						case "session.ended":
-							setRunning(false);
+						});
+						return;
+					case "turn.completed":
+						setRunning(false);
+						if (event.usage) setUsage(event.usage);
+						if (event.resumeSessionId)
+							setResumeSessionId(event.resumeSessionId);
+						return;
+					case "usage.updated":
+						setUsage(event.usage);
+						return;
+					case "model.info":
+						setActiveModel(event.model);
+						return;
+					case "session.ended":
+						setRunning(false);
+						setSessionId(null);
+						return;
+					case "error":
+						toast.error(event.message);
+						// Session was cleaned up (e.g. pane was unmounted when it
+						// finished). Reconnecting fails — reset so the user can
+						// send a new message instead of staying stuck on
+						// "Claude is working…".
+						if (/not found/i.test(event.message)) {
 							setSessionId(null);
-							return next;
-						case "error":
-							toast.error(event.message);
-							return next;
-						default:
-							return next;
-					}
-				});
+							setRunning(false);
+						}
+						return;
+					default:
+						return;
+				}
 			},
 			onError: (err) => {
 				toast.error(`SDK stream error: ${err.message}`);
@@ -373,6 +485,41 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 			setResumeHydrated(true);
 		}
 	}, [resumeHydrated, resumeIdQuery.data]);
+
+	// Backend is the source of truth for whether a turn is in flight. Poll
+	// every few seconds so the "Claude is working…" indicator reconciles
+	// even if an event was dropped (unmounted pane, stream hiccup, suspend).
+	// The immediate on-mount fetch also covers the "running stuck true
+	// because turn.completed arrived while we were unmounted" case.
+	const sessionStateQuery = electronTrpc.claudeSdk.getSessionState.useQuery(
+		sessionId ? { sessionId } : (undefined as never),
+		{
+			enabled: !!sessionId,
+			staleTime: 0,
+			refetchInterval: 3000,
+			refetchOnWindowFocus: true,
+		},
+	);
+	useEffect(() => {
+		if (!sessionId) return;
+		if (!sessionStateQuery.data) return;
+		if (!sessionStateQuery.data.exists) {
+			// Session was cleaned up server-side; reset so the user can start
+			// a fresh turn instead of staying stuck on "Claude is working…".
+			setSessionId(null);
+			setRunning(false);
+			return;
+		}
+		setRunning(sessionStateQuery.data.inFlight);
+	}, [sessionId, sessionStateQuery.data, setRunning, setSessionId]);
+
+	// Invariant: if there's no session, nothing can be running. Fix stale
+	// state that might have survived the app foregrounding.
+	useEffect(() => {
+		if (!sessionId && running) {
+			setRunning(false);
+		}
+	}, [sessionId, running, setRunning]);
 
 	useEffect(() => {
 		if (!resumeHydrated) return;
@@ -706,12 +853,8 @@ export function ClaudeSdkPane({ paneId, workspaceId }: ClaudeSdkPaneProps) {
 
 	const handleNewChat = () => {
 		if (sessionId) stopSession.mutate({ sessionId });
-		setSessionId(null);
 		setResumeSessionId(null);
-		setTurns([]);
-		setUsage(null);
-		setActiveModel(null);
-		setRunning(false);
+		resetConversation(paneId);
 	};
 
 	const contextPct = useMemo(() => {

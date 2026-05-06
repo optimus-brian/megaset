@@ -1,5 +1,9 @@
 import { observable } from "@trpc/server/observable";
 import { getClaudeSdkManager } from "fork/claude-sdk/main/manager";
+import {
+	getResumeSessionId,
+	setResumeSessionId,
+} from "fork/claude-sdk/main/resume-store";
 import type {
 	ApprovalDecision,
 	RuntimeEvent,
@@ -35,15 +39,28 @@ export const createClaudeSdkRouter = () => {
 
 		sendMessage: publicProcedure
 			.input(
-				z.object({
-					sessionId: z.string().min(1),
-					text: z.string().min(1),
-				}),
+				z
+					.object({
+						sessionId: z.string().min(1),
+						text: z.string(),
+						attachments: z
+							.array(
+								z.object({
+									mediaType: z.string().min(1),
+									data: z.string().min(1),
+								}),
+							)
+							.optional(),
+					})
+					.refine(
+						(v) => v.text.trim().length > 0 || (v.attachments?.length ?? 0) > 0,
+						{ message: "Message must contain text or attachments" },
+					),
 			)
 			.mutation(({ input }) => {
 				const session = getClaudeSdkManager().get(input.sessionId);
 				if (!session) throw new Error("Session not found");
-				session.sendUserMessage(input.text);
+				session.sendUserMessage(input.text, input.attachments);
 				return { ok: true };
 			}),
 
@@ -81,22 +98,77 @@ export const createClaudeSdkRouter = () => {
 				return { ok };
 			}),
 
-		events: publicProcedure
+		setPermissionMode: publicProcedure
+			.input(
+				z.object({
+					sessionId: z.string().min(1),
+					mode: z.enum([
+						"default",
+						"acceptEdits",
+						"bypassPermissions",
+						"plan",
+					]),
+				}),
+			)
+			.mutation(async ({ input }) => {
+				const session = getClaudeSdkManager().get(input.sessionId);
+				if (!session) throw new Error("Session not found");
+				const ok = await session.setPermissionMode(input.mode);
+				return { ok };
+			}),
+
+		getResumeId: publicProcedure
+			.input(z.object({ paneId: z.string().min(1) }))
+			.query(({ input }) => {
+				return { resumeSessionId: getResumeSessionId(input.paneId) };
+			}),
+
+		setResumeId: publicProcedure
+			.input(
+				z.object({
+					paneId: z.string().min(1),
+					resumeSessionId: z.string().nullable(),
+				}),
+			)
+			.mutation(({ input }) => {
+				setResumeSessionId(input.paneId, input.resumeSessionId);
+				return { ok: true };
+			}),
+
+		getSessionState: publicProcedure
 			.input(z.object({ sessionId: z.string().min(1) }))
+			.query(({ input }) => {
+				const session = getClaudeSdkManager().get(input.sessionId);
+				if (!session) return { exists: false as const };
+				return { exists: true as const, inFlight: session.inFlight };
+			}),
+
+		events: publicProcedure
+			.input(
+				z.object({
+					sessionId: z.string().min(1),
+					// Only replay events the renderer hasn't seen yet. Every event
+					// carries a monotonically increasing `seq`; the renderer sends
+					// the highest one it's applied so we can pick up from there.
+					// Defaults to 0, which replays everything.
+					sinceSeq: z.number().int().nonnegative().optional(),
+				}),
+			)
 			.subscription(({ input }) => {
 				return observable<RuntimeEvent>((emit) => {
 					const session = getClaudeSdkManager().get(input.sessionId);
 					if (!session) {
 						emit.next({
 							type: "error",
+							seq: 0,
 							message: `Session ${input.sessionId} not found`,
 						});
 						emit.complete();
 						return () => {};
 					}
-					// Replay history so late subscribers don't miss events
+					const since = input.sinceSeq ?? 0;
 					for (const event of session.replayEvents()) {
-						emit.next(event);
+						if (event.seq > since) emit.next(event);
 					}
 					const handler = (event: RuntimeEvent) => {
 						emit.next(event);

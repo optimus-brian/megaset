@@ -7,7 +7,9 @@ import { join } from "node:path";
 import {
 	type CanUseTool,
 	type Options as ClaudeQueryOptions,
+	type PermissionMode,
 	query,
+	type Query,
 	type SDKMessage,
 	type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
@@ -20,6 +22,14 @@ import type {
 	StartSessionInput,
 	UsageSnapshot,
 } from "./types";
+
+// Distributive Omit: preserves each variant of the RuntimeEvent union
+// instead of collapsing it into a single keys-of-all-variants object.
+type UnstampedRuntimeEvent = RuntimeEvent extends infer E
+	? E extends RuntimeEvent
+		? Omit<E, "seq">
+		: never
+	: never;
 
 function findClaudeBinary(): string | undefined {
 	const candidates = [
@@ -96,6 +106,27 @@ export class ClaudeSdkSession extends EventEmitter {
 	private stopped = false;
 	private started = false;
 	private contextWindow = 200_000;
+	private queryHandle: Query | undefined;
+	// Tracks whether a turn is currently being processed (set on user message
+	// intake, cleared on turn.completed). Exposed so the renderer can resync
+	// its "Claude is working…" indicator after a pane remount — events
+	// emitted while unmounted don't reach the subscription, so the store's
+	// `running` flag would otherwise stay true forever.
+	private _inFlight = false;
+
+	get inFlight(): boolean {
+		return this._inFlight;
+	}
+
+	// Monotonically increasing sequence number assigned to every emitted
+	// event. The renderer dedupes on replay using this (see
+	// conversation-store's `lastAppliedSeq`). Starts at 1 so that 0 is a
+	// sentinel "no events seen yet" for the renderer.
+	private _seq = 0;
+	private nextSeq(): number {
+		this._seq += 1;
+		return this._seq;
+	}
 
 	constructor(input: StartSessionInput) {
 		super();
@@ -108,20 +139,29 @@ export class ClaudeSdkSession extends EventEmitter {
 		return [...this.eventHistory];
 	}
 
-	emitEvent(event: RuntimeEvent): void {
-		this.eventHistory.push(event);
-		console.log("[claude-sdk]", this.id.slice(0, 8), event.type);
-		this.emit("event", event);
+	emitEvent(event: UnstampedRuntimeEvent): void {
+		const stamped = { ...event, seq: this.nextSeq() } as RuntimeEvent;
+		this.eventHistory.push(stamped);
+		console.log(
+			"[claude-sdk]",
+			this.id.slice(0, 8),
+			`#${stamped.seq}`,
+			event.type,
+		);
+		this.emit("event", stamped);
 	}
 
 	start(input: StartSessionInput): void {
 		if (this.started) return;
 		this.started = true;
 
-		const autoAllowTools =
-			input.permissionMode === "plan"
-				? new Set(["Read", "Grep", "Glob"])
-				: new Set<string>();
+		const autoAllowTools = new Set([
+			"Read",
+			"Grep",
+			"Glob",
+			"LS",
+			"NotebookRead",
+		]);
 
 		const canUseTool: CanUseTool = async (toolName, toolInput, _opts) => {
 			if (this.stopped) {
@@ -178,7 +218,7 @@ export class ClaudeSdkSession extends EventEmitter {
 				PATH: `${process.env.PATH ?? ""}:${homedir()}/.local/bin:/opt/homebrew/bin:/usr/local/bin`,
 			},
 			additionalDirectories: [input.cwd],
-			settingSources: ["project"],
+			settingSources: ["user", "project", "local"],
 			stderr: (data: string) => {
 				console.warn("[claude-sdk stderr]", this.id.slice(0, 8), data);
 			},
@@ -218,10 +258,13 @@ export class ClaudeSdkSession extends EventEmitter {
 			},
 		};
 
-		for await (const message of query({ prompt: promptIterable, options })) {
+		this.queryHandle = query({ prompt: promptIterable, options });
+		for await (const message of this.queryHandle) {
 			if (this.stopped) break;
 			this.handleSdkMessage(message);
 		}
+		this.queryHandle = undefined;
+		this._inFlight = false;
 		this.emitEvent({ type: "session.ended", sessionId: this.id });
 	}
 
@@ -240,11 +283,20 @@ export class ClaudeSdkSession extends EventEmitter {
 				return;
 			}
 			case "assistant": {
+				const messageId = msg.message.id ?? randomUUID();
 				for (const block of msg.message.content) {
 					if (block.type === "text" && block.text) {
-						this.emitEvent({ type: "assistant.text", text: block.text });
+						this.emitEvent({
+							type: "assistant.text",
+							messageId,
+							text: block.text,
+						});
 					} else if (block.type === "thinking" && block.thinking) {
-						this.emitEvent({ type: "assistant.thinking", text: block.thinking });
+						this.emitEvent({
+							type: "assistant.thinking",
+							messageId,
+							text: block.thinking,
+						});
 					} else if (block.type === "tool_use") {
 						this.emitEvent({
 							type: "tool.use",
@@ -322,6 +374,7 @@ export class ClaudeSdkSession extends EventEmitter {
 					};
 					this.emitEvent({ type: "usage.updated", usage });
 				}
+				this._inFlight = false;
 				this.emitEvent({
 					type: "turn.completed",
 					resumeSessionId: this.resumeSessionId,
@@ -334,18 +387,62 @@ export class ClaudeSdkSession extends EventEmitter {
 		}
 	}
 
-	sendUserMessage(text: string): void {
+	sendUserMessage(
+		text: string,
+		attachments?: ReadonlyArray<{ mediaType: string; data: string }>,
+	): void {
 		if (this.stopped) return;
+		const content: Array<
+			| { type: "text"; text: string }
+			| {
+					type: "image";
+					source: { type: "base64"; media_type: string; data: string };
+			  }
+		> = [];
+		if (attachments) {
+			for (const a of attachments) {
+				if (!a.mediaType.startsWith("image/")) continue;
+				content.push({
+					type: "image",
+					source: {
+						type: "base64",
+						media_type: a.mediaType,
+						data: a.data,
+					},
+				});
+			}
+		}
+		if (text) content.push({ type: "text", text });
+		if (content.length === 0) return;
+		this._inFlight = true;
 		const sdkMsg: SDKUserMessage = {
 			type: "user",
 			message: {
 				role: "user",
-				content: [{ type: "text", text }],
+				// biome-ignore lint/suspicious/noExplicitAny: SDK content type uses Anthropic block unions
+				content: content as any,
 			},
 			parent_tool_use_id: null,
 			session_id: this.resumeSessionId ?? this.id,
 		};
 		this.promptQueue.push({ type: "message", message: sdkMsg });
+	}
+
+	async setPermissionMode(mode: PermissionMode): Promise<boolean> {
+		if (this.stopped || !this.queryHandle) return false;
+		await this.queryHandle.setPermissionMode(mode);
+		if (mode === "bypassPermissions") {
+			for (const p of this.pendingApprovals.values()) {
+				p.resolve({ behavior: "allow", updatedInput: p.toolInput });
+				this.emitEvent({
+					type: "approval.resolved",
+					approvalId: p.id,
+					decision: "allow",
+				});
+			}
+			this.pendingApprovals.clear();
+		}
+		return true;
 	}
 
 	resolveApproval(approvalId: string, decision: ApprovalDecision): boolean {

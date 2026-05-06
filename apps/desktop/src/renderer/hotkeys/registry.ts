@@ -288,6 +288,15 @@ export const HOTKEYS_REGISTRY = {
 		label: "New Chat",
 		category: "Terminal",
 	},
+	NEW_CLAUDE_SDK: {
+		key: {
+			mac: "meta+shift+c",
+			windows: "ctrl+shift+alt+c",
+			linux: "ctrl+shift+alt+c",
+		},
+		label: "New Claude SDK",
+		category: "Terminal",
+	},
 	REOPEN_TAB: {
 		key: {
 			mac: "meta+shift+r",

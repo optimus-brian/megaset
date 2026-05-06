@@ -152,6 +152,7 @@ function WorkspacePage() {
 	const addChatTab = useTabsStore((s) => s.addChatTab);
 	const reopenClosedTab = useTabsStore((s) => s.reopenClosedTab);
 	const addBrowserTab = useTabsStore((s) => s.addBrowserTab);
+	const addClaudeSdkTab = useTabsStore((s) => s.addClaudeSdkTab);
 	const setActiveTab = useTabsStore((s) => s.setActiveTab);
 	const setFocusedPane = useTabsStore((s) => s.setFocusedPane);
 	const toggleSidebar = useSidebarStore((s) => s.toggleSidebar);
@@ -213,6 +214,7 @@ function WorkspacePage() {
 		}
 	});
 	useHotkey("NEW_BROWSER", () => addBrowserTab(workspaceId));
+	useHotkey("NEW_CLAUDE_SDK", () => addClaudeSdkTab(workspaceId));
 	usePresetHotkeys(openTabWithPreset);
 
 	useHotkey("RUN_WORKSPACE_COMMAND", () => toggleWorkspaceRun());
