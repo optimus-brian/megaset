@@ -1,4 +1,3 @@
-import { Button } from "@superset/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -9,88 +8,99 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@superset/ui/dropdown-menu";
+import { cn } from "@superset/ui/utils";
 import {
 	HiCheck,
 	HiChevronUpDown,
-	HiOutlineCloud,
 	HiOutlineComputerDesktop,
 	HiOutlineServer,
 } from "react-icons/hi2";
+import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
+import { FormPickerTrigger } from "../../PromptGroup/components/FormPickerTrigger";
 import {
 	useWorkspaceHostOptions,
 	type WorkspaceHostOption,
 } from "./hooks/useWorkspaceHostOptions";
-import type { WorkspaceHostTarget } from "./types";
 
-interface DevicePickerProps {
-	hostTarget: WorkspaceHostTarget;
-	onSelectHostTarget: (target: WorkspaceHostTarget) => void;
-}
-
-function getHostIcon(host: WorkspaceHostOption) {
-	return host.isCloud ? HiOutlineCloud : HiOutlineComputerDesktop;
-}
-
-function getSelectedLabel(
-	hostTarget: WorkspaceHostTarget,
-	currentDeviceName: string | null,
-	otherHosts: WorkspaceHostOption[],
-) {
-	if (hostTarget.kind === "local") {
-		return currentDeviceName ?? "Local Device";
-	}
-
+function OnlineDot({ online }: { online: boolean }) {
 	return (
-		otherHosts.find((host) => host.id === hostTarget.hostId)?.name ??
-		"Unknown Host"
+		<span
+			role="img"
+			aria-label={online ? "online" : "offline"}
+			className={cn(
+				"inline-block size-1.5 shrink-0 rounded-full",
+				online ? "bg-emerald-500" : "bg-muted-foreground/60",
+			)}
+		/>
 	);
 }
 
-function getSelectedIcon(
-	hostTarget: WorkspaceHostTarget,
+interface DevicePickerProps {
+	hostId: string | null;
+	onSelectHostId: (hostId: string | null) => void;
+	className?: string;
+}
+
+function getSelectedLabel(
+	hostId: string | null,
+	machineId: string | null,
+	currentDeviceName: string | null,
 	otherHosts: WorkspaceHostOption[],
 ) {
-	if (hostTarget.kind === "local") {
+	if (hostId === null || hostId === machineId) {
+		return currentDeviceName ?? "Local Device";
+	}
+	return otherHosts.find((host) => host.id === hostId)?.name ?? "Unknown Host";
+}
+
+function getSelectedIcon(hostId: string | null, machineId: string | null) {
+	if (hostId === null || hostId === machineId) {
 		return <HiOutlineComputerDesktop className="size-4 shrink-0" />;
 	}
-
-	const host = otherHosts.find((h) => h.id === hostTarget.hostId);
-	if (host?.isCloud) {
-		return <HiOutlineCloud className="size-4 shrink-0" />;
-	}
-
 	return <HiOutlineServer className="size-4 shrink-0" />;
 }
 
 export function DevicePicker({
-	hostTarget,
-	onSelectHostTarget,
+	hostId,
+	onSelectHostId,
+	className,
 }: DevicePickerProps) {
+	const { machineId } = useLocalHostService();
 	const { currentDeviceName, otherHosts } = useWorkspaceHostOptions();
+	const isLocal = hostId === null || hostId === machineId;
 	const selectedLabel = getSelectedLabel(
-		hostTarget,
+		hostId,
+		machineId,
 		currentDeviceName,
 		otherHosts,
 	);
+	// Only remote hosts have a meaningful online indicator — the app itself
+	// is the local host, so it's tautologically online.
+	const selectedRemoteOnline = isLocal
+		? null
+		: (otherHosts.find((host) => host.id === hostId)?.isOnline ?? false);
 
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs">
-					<span className="flex min-w-0 items-center gap-1.5">
-						{getSelectedIcon(hostTarget, otherHosts)}
-						<span className="max-w-[140px] truncate">{selectedLabel}</span>
-					</span>
-					<HiChevronUpDown className="size-3 shrink-0" />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-72">
-				<DropdownMenuItem
-					onSelect={() => onSelectHostTarget({ kind: "local" })}
+				<FormPickerTrigger
+					className={cn("max-w-[140px]", className)}
+					aria-label={`Device: ${selectedLabel}`}
+					title={selectedLabel}
 				>
+					{getSelectedIcon(hostId, machineId)}
+					<span className="truncate">{selectedLabel}</span>
+					{selectedRemoteOnline !== null && (
+						<OnlineDot online={selectedRemoteOnline} />
+					)}
+					<HiChevronUpDown className="size-3 shrink-0" />
+				</FormPickerTrigger>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="start" className="w-72">
+				<DropdownMenuItem onSelect={() => onSelectHostId(machineId)}>
 					<HiOutlineComputerDesktop className="size-4" />
 					<span className="flex-1">Local Device</span>
-					{hostTarget.kind === "local" && <HiCheck className="size-4" />}
+					{isLocal && <HiCheck className="size-4" />}
 				</DropdownMenuItem>
 				{otherHosts.length > 0 && (
 					<>
@@ -102,25 +112,19 @@ export function DevicePicker({
 							</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent className="w-72">
 								{otherHosts.map((host) => {
-									const HostIcon = getHostIcon(host);
-									const isSelected =
-										hostTarget.kind === "host" && hostTarget.hostId === host.id;
+									const isSelected = hostId === host.id;
 
 									return (
 										<DropdownMenuItem
 											key={host.id}
-											onSelect={() =>
-												onSelectHostTarget({
-													kind: "host",
-													hostId: host.id,
-												})
-											}
+											onSelect={() => onSelectHostId(host.id)}
 										>
-											<HostIcon className="size-4" />
-											<div className="min-w-0 flex-1">
-												<div className="truncate">{host.name}</div>
-											</div>
-											{isSelected && <HiCheck className="size-4" />}
+											<HiOutlineServer className="size-4" />
+											<span className="min-w-0 truncate">{host.name}</span>
+											<OnlineDot online={host.isOnline} />
+											{isSelected && (
+												<HiCheck className="ml-auto size-4 shrink-0" />
+											)}
 										</DropdownMenuItem>
 									);
 								})}

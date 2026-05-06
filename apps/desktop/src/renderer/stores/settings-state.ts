@@ -11,13 +11,16 @@ export type SettingsSection =
 	| "git"
 	| "agents"
 	| "terminal"
+	| "links"
 	| "models"
+	| "experimental"
 	| "integrations"
 	| "billing"
 	| "apikeys"
 	| "permissions"
 	| "security"
-	| "project";
+	| "project"
+	| "hosts";
 
 interface SettingsState {
 	activeSection: SettingsSection;

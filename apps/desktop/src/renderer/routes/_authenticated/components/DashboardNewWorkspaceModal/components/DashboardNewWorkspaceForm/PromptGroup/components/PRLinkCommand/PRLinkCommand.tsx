@@ -1,3 +1,4 @@
+import { Checkbox } from "@superset/ui/checkbox";
 import {
 	Command,
 	CommandEmpty,
@@ -6,21 +7,18 @@ import {
 	CommandItem,
 	CommandList,
 } from "@superset/ui/command";
-import { Popover, PopoverAnchor, PopoverContent } from "@superset/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@superset/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
-import type React from "react";
-import type { RefObject } from "react";
-import { useState } from "react";
-import { env } from "renderer/env.renderer";
+import type { ReactNode } from "react";
+import { useId, useState } from "react";
+import { useHostUrl } from "renderer/hooks/host-service/useHostTargetUrl";
 import { useDebouncedValue } from "renderer/hooks/useDebouncedValue";
 import { getHostServiceClientByUrl } from "renderer/lib/host-service-client";
-import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
 import {
 	PRIcon,
 	type PRState,
 } from "renderer/screens/main/components/PRIcon/PRIcon";
-import type { WorkspaceHostTarget } from "../../../components/DevicePicker";
-
 export interface SelectedPR {
 	prNumber: number;
 	title: string;
@@ -29,12 +27,11 @@ export interface SelectedPR {
 }
 
 interface PRLinkCommandProps {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
+	children: ReactNode;
+	tooltipLabel: string;
 	onSelect: (pr: SelectedPR) => void;
 	projectId: string | null;
-	hostTarget: WorkspaceHostTarget;
-	anchorRef: RefObject<HTMLElement | null>;
+	hostId: string | null;
 }
 
 function normalizeState(state: string, isDraft: boolean): string {
@@ -44,25 +41,22 @@ function normalizeState(state: string, isDraft: boolean): string {
 }
 
 export function PRLinkCommand({
-	open,
-	onOpenChange,
+	children,
+	tooltipLabel,
 	onSelect,
 	projectId,
-	hostTarget,
-	anchorRef,
+	hostId,
 }: PRLinkCommandProps) {
+	const [open, setOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [showClosed, setShowClosed] = useState(false);
+	const showClosedId = useId();
 	const debouncedQuery = useDebouncedValue(searchQuery, 300);
-	const { activeHostUrl } = useLocalHostService();
+	const hostUrl = useHostUrl(hostId);
 
 	const trimmedQuery = searchQuery.trim();
 	const debouncedTrimmed = debouncedQuery.trim();
 	const isPendingDebounce = trimmedQuery !== debouncedTrimmed;
-
-	const hostUrl =
-		hostTarget.kind === "local"
-			? activeHostUrl
-			: `${env.RELAY_URL}/hosts/${hostTarget.hostId}`;
 
 	const { data, isFetching } = useQuery({
 		queryKey: [
@@ -71,6 +65,7 @@ export function PRLinkCommand({
 			projectId,
 			hostUrl,
 			debouncedTrimmed,
+			showClosed,
 		],
 		queryFn: async () => {
 			if (!hostUrl || !projectId) return { pullRequests: [] };
@@ -79,6 +74,7 @@ export function PRLinkCommand({
 				projectId,
 				query: debouncedTrimmed || undefined,
 				limit: 30,
+				includeClosed: showClosed,
 			});
 		},
 		enabled: !!projectId && !!hostUrl && open,
@@ -93,11 +89,6 @@ export function PRLinkCommand({
 			? isFetching || isPendingDebounce
 			: isFetching;
 
-	const handleClose = () => {
-		setSearchQuery("");
-		onOpenChange(false);
-	};
-
 	const handleSelect = (pr: (typeof pullRequests)[number]) => {
 		onSelect({
 			prNumber: pr.prNumber,
@@ -105,20 +96,29 @@ export function PRLinkCommand({
 			url: pr.url,
 			state: normalizeState(pr.state, pr.isDraft),
 		});
-		handleClose();
+		setSearchQuery("");
+		setOpen(false);
 	};
 
 	return (
-		<Popover open={open}>
-			<PopoverAnchor virtualRef={anchorRef as React.RefObject<Element>} />
+		<Popover
+			open={open}
+			onOpenChange={(next) => {
+				if (!next) setSearchQuery("");
+				setOpen(next);
+			}}
+		>
+			<Tooltip>
+				<PopoverTrigger asChild>
+					<TooltipTrigger asChild>{children}</TooltipTrigger>
+				</PopoverTrigger>
+				<TooltipContent side="bottom">{tooltipLabel}</TooltipContent>
+			</Tooltip>
 			<PopoverContent
 				className="w-80 p-0"
 				align="start"
 				side="bottom"
 				onWheel={(event) => event.stopPropagation()}
-				onPointerDownOutside={handleClose}
-				onEscapeKeyDown={handleClose}
-				onFocusOutside={(e) => e.preventDefault()}
 			>
 				<Command shouldFilter={false}>
 					<CommandInput
@@ -126,6 +126,19 @@ export function PRLinkCommand({
 						value={searchQuery}
 						onValueChange={setSearchQuery}
 					/>
+					<div className="flex items-center gap-2 border-b px-3 py-2">
+						<Checkbox
+							id={showClosedId}
+							checked={showClosed}
+							onCheckedChange={(checked) => setShowClosed(checked === true)}
+						/>
+						<label
+							htmlFor={showClosedId}
+							className="cursor-pointer select-none text-xs text-muted-foreground"
+						>
+							Show closed
+						</label>
+					</div>
 					<CommandList className="max-h-[280px]">
 						{pullRequests.length === 0 && (
 							<CommandEmpty>
@@ -136,8 +149,12 @@ export function PRLinkCommand({
 									: repoMismatch
 										? `PR URL must match ${repoMismatch}.`
 										: debouncedTrimmed
-											? "No pull requests found."
-											: "No pull requests found."}
+											? showClosed
+												? "No pull requests found."
+												: "No open pull requests found."
+											: showClosed
+												? "No pull requests found."
+												: "No open pull requests."}
 							</CommandEmpty>
 						)}
 						{pullRequests.length > 0 && (
@@ -145,7 +162,9 @@ export function PRLinkCommand({
 								heading={
 									debouncedTrimmed
 										? `${pullRequests.length} result${pullRequests.length === 1 ? "" : "s"}`
-										: "Recent PRs"
+										: showClosed
+											? "Recent PRs"
+											: "Open PRs"
 								}
 							>
 								{pullRequests.map((pr) => (

@@ -14,7 +14,8 @@ export type PaneType =
 	| "file-viewer"
 	| "chat"
 	| "devtools"
-	| "claude-sdk";
+	| "claude-sdk"
+	| "comment";
 
 /**
  * Pane status for agent lifecycle indicators
@@ -143,6 +144,7 @@ export interface Pane {
 	chat?: ChatPaneState; // For chat panes
 	browser?: BrowserPaneState; // For browser (webview) panes
 	devtools?: DevToolsPaneState; // For devtools panes
+	comment?: CommentPaneState; // For comment panes
 	workspaceRun?: {
 		workspaceId: string;
 		state: "running" | "stopped-by-user" | "stopped-by-exit";
@@ -219,6 +221,19 @@ export interface BrowserPaneState {
 export interface DevToolsPaneState {
 	/** The pane ID of the browser pane being inspected */
 	targetPaneId: string;
+}
+
+/**
+ * Comment pane-specific properties (PR review / conversation comment viewer)
+ */
+export interface CommentPaneState {
+	commentId: string;
+	authorLogin: string;
+	avatarUrl?: string;
+	body: string;
+	url?: string;
+	path?: string;
+	line?: number;
 }
 
 /**

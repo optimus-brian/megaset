@@ -1,95 +1,183 @@
 import { toast } from "@superset/ui/sonner";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type {
+	DestroyWorkspacePreview,
+	DestroyWorkspaceSuccess,
+} from "renderer/hooks/host-service/useDestroyWorkspace";
 import {
 	type DestroyWorkspaceError,
 	useDestroyWorkspace,
 } from "renderer/hooks/host-service/useDestroyWorkspace";
+import { useV2UserPreferences } from "renderer/hooks/useV2UserPreferences/useV2UserPreferences";
+import { useNavigateAwayFromWorkspace } from "renderer/routes/_authenticated/_dashboard/components/DashboardSidebar/hooks/useNavigateAwayFromWorkspace";
+import { useDeletingWorkspaces } from "renderer/routes/_authenticated/providers/DeletingWorkspacesProvider";
 
 interface UseDestroyDialogStateOptions {
 	workspaceId: string;
 	workspaceName: string;
+	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onDeleted?: () => void;
 }
 
-/**
- * Drives the delete flow for `DashboardSidebarDeleteDialog`.
- *
- * UX pattern (mirrors v1's deleteWithToast):
- *   - On confirm, close the dialog immediately and run the destroy
- *     in the background under a toast.loading → success/error.
- *   - For decision-required errors (CONFLICT, TEARDOWN_FAILED) we
- *     reopen the dialog in the matching error pane so the user can
- *     force-retry with full context. The branch opt-in is preserved.
- *   - For unknown errors we just toast.error — no reopen.
- */
+type InspectState =
+	| { status: "idle" }
+	| { status: "loading" }
+	| { status: "ready"; preview: DestroyWorkspacePreview }
+	| { status: "error" };
+
 export function useDestroyDialogState({
 	workspaceId,
 	workspaceName,
+	open,
 	onOpenChange,
 	onDeleted,
 }: UseDestroyDialogStateOptions) {
-	const { destroy } = useDestroyWorkspace(workspaceId);
+	const { destroy, inspect, hostTarget } = useDestroyWorkspace(workspaceId);
+	const { markDeleting, clearDeleting } = useDeletingWorkspaces();
+	const navigateAway = useNavigateAwayFromWorkspace();
 
-	const [deleteBranch, setDeleteBranch] = useState(false);
+	const { preferences, setDeleteLocalBranch: setDeleteBranch } =
+		useV2UserPreferences();
+	const deleteBranch = preferences.deleteLocalBranch;
+
+	const [inspectState, setInspectState] = useState<InspectState>({
+		status: "idle",
+	});
 	const [error, setError] = useState<DestroyWorkspaceError | null>(null);
 	const inFlight = useRef(false);
 
+	// Run inspect when the dialog opens AND the host is ready. Distinguish
+	// transient pending-host states (loading / local-starting → silent
+	// "Checking…") from terminal ones (not-found → blocking banner) so the
+	// user can't sit in a forever-disabled dialog.
+	useEffect(() => {
+		if (!open) {
+			setInspectState({ status: "idle" });
+			return;
+		}
+		if (
+			hostTarget.status === "loading" ||
+			hostTarget.status === "local-starting"
+		) {
+			setInspectState({ status: "loading" });
+			return;
+		}
+		if (hostTarget.status === "not-found") {
+			setInspectState({
+				status: "ready",
+				preview: {
+					canDelete: false,
+					reason: "Workspace is no longer available on this host.",
+					hasChanges: false,
+					hasUnpushedCommits: false,
+				},
+			});
+			return;
+		}
+
+		let cancelled = false;
+		setInspectState({ status: "loading" });
+		inspect()
+			.then((preview) => {
+				if (cancelled) return;
+				setInspectState({ status: "ready", preview });
+			})
+			.catch(() => {
+				if (cancelled) return;
+				// Inspect-failure is non-fatal — let the user attempt destroy and
+				// surface real errors there. Treat as "no warnings, no block".
+				setInspectState({ status: "error" });
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [open, hostTarget.status, inspect]);
+
+	const preview = inspectState.status === "ready" ? inspectState.preview : null;
+
 	const handleOpenChange = useCallback(
 		(next: boolean) => {
-			if (!next) {
-				setDeleteBranch(false);
-				setError(null);
-			}
+			if (!next) setError(null);
 			onOpenChange(next);
 		},
 		[onOpenChange],
 	);
 
-	const clearError = useCallback(() => setError(null), []);
-
 	const run = useCallback(
 		async (force: boolean) => {
-			// Guard against double-submit: optimistic close + async mutate means
-			// a rapid second click (from the same pane or a re-opened error pane)
-			// could fire destroy twice before the first resolves.
 			if (inFlight.current) return;
 			inFlight.current = true;
 
-			// Optimistic close. State (deleteBranch) preserved in case we re-open
-			// on a decision-required error.
+			// Navigate off the doomed workspace FIRST. Closing the dialog
+			// and hiding the row were swallowing the nav otherwise.
+			navigateAway(workspaceId);
+
 			setError(null);
 			onOpenChange(false);
-
-			const loadingId = toast.loading(`Deleting ${workspaceName}...`);
+			markDeleting(workspaceId);
+			toast(`Deleting "${workspaceName}"...`);
 
 			try {
-				const result = await destroy({ deleteBranch, force });
-				toast.success(`Deleted ${workspaceName}`, { id: loadingId });
+				let result: DestroyWorkspaceSuccess;
+				try {
+					result = await destroy({ deleteBranch, force });
+				} catch (firstErr) {
+					const e = firstErr as DestroyWorkspaceError;
+					// Silent force-retry on the dirty-worktree race: preflight said
+					// clean but the worktree was dirty by destroy time. The user
+					// already confirmed once — don't bounce them back through a
+					// second warning. Do NOT extend this to `in-progress` (that's
+					// a different CONFLICT cause; retrying just races the same
+					// guard).
+					if (e.kind === "conflict" && !force) {
+						result = await destroy({ deleteBranch, force: true });
+					} else {
+						throw firstErr;
+					}
+				}
 				for (const warning of result.warnings) toast.warning(warning);
-				setDeleteBranch(false);
 				onDeleted?.();
 			} catch (err) {
 				const e = err as DestroyWorkspaceError;
-				if (e.kind === "conflict" || e.kind === "teardown-failed") {
-					toast.dismiss(loadingId);
+				if (e.kind === "teardown-failed") {
 					setError(e);
 					onOpenChange(true);
+				} else if (e.kind === "in-progress") {
+					toast.error(`A delete is already in progress for ${workspaceName}.`);
 				} else {
-					toast.error(`Failed to delete: ${e.message}`, { id: loadingId });
+					toast.error(
+						`Failed to delete ${workspaceName}: ${"message" in e ? e.message : String(e.kind)}`,
+					);
 				}
 			} finally {
+				clearDeleting(workspaceId);
 				inFlight.current = false;
 			}
 		},
-		[destroy, deleteBranch, workspaceName, onOpenChange, onDeleted],
+		[
+			destroy,
+			deleteBranch,
+			workspaceName,
+			workspaceId,
+			onOpenChange,
+			onDeleted,
+			markDeleting,
+			clearDeleting,
+			navigateAway,
+		],
 	);
 
 	return {
 		deleteBranch,
 		setDeleteBranch,
+		hasChanges: preview?.hasChanges ?? false,
+		hasUnpushedCommits: preview?.hasUnpushedCommits ?? false,
+		canConfirm: preview ? preview.canDelete : true,
+		blockingReason: preview && !preview.canDelete ? preview.reason : null,
+		isCheckingStatus: open && inspectState.status === "loading",
 		error,
-		clearError,
 		handleOpenChange,
 		run,
 	};

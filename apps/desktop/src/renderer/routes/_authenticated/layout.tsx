@@ -17,14 +17,20 @@ import { useUpdateListener } from "renderer/components/UpdateToast";
 import { env } from "renderer/env.renderer";
 import { useIsV2CloudEnabled } from "renderer/hooks/useIsV2CloudEnabled";
 import { useOnlineStatus } from "renderer/hooks/useOnlineStatus";
-import { migrateHotkeyOverrides } from "renderer/hotkeys/migrate";
 import { authClient, getAuthToken } from "renderer/lib/auth-client";
 import { dragDropManager } from "renderer/lib/dnd";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { showWorkspaceAutoNameWarningToast } from "renderer/lib/workspaces/showWorkspaceAutoNameWarningToast";
 import { InitGitDialog } from "renderer/react-query/projects/InitGitDialog";
 import { DashboardNewWorkspaceModal } from "renderer/routes/_authenticated/components/DashboardNewWorkspaceModal";
+import { V1MigrationSummaryModal } from "renderer/routes/_authenticated/components/V1MigrationSummaryModal";
 import { WorkspaceInitEffects } from "renderer/screens/main/components/WorkspaceInitEffects";
+import {
+	STEP_ROUTES,
+	selectFirstIncompleteStep,
+	selectRequiredStepsComplete,
+	useOnboardingStore,
+} from "renderer/stores/onboarding";
 import { useSettingsStore } from "renderer/stores/settings-state";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { useAgentHookListener } from "renderer/stores/tabs/useAgentHookListener";
@@ -32,10 +38,12 @@ import { setPaneWorkspaceRunState } from "renderer/stores/tabs/workspace-run";
 import { useWorkspaceInitStore } from "renderer/stores/workspace-init";
 import { MOCK_ORG_ID, NOTIFICATION_EVENTS } from "shared/constants";
 import { AgentHooks } from "./components/AgentHooks";
-import { GlobalTerminalLifecycle } from "./components/GlobalTerminalLifecycle";
+import { GlobalBrowserLifecycle } from "./components/GlobalBrowserLifecycle";
 import { TeardownLogsDialog } from "./components/TeardownLogsDialog";
+import { V2NotificationController } from "./components/V2NotificationController";
 import { createPierreWorker } from "./lib/pierreWorker";
 import { CollectionsProvider } from "./providers/CollectionsProvider";
+import { DeletingWorkspacesProvider } from "./providers/DeletingWorkspacesProvider";
 import { LocalHostServiceProvider } from "./providers/LocalHostServiceProvider";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -56,7 +64,9 @@ function AuthenticatedLayout() {
 	const setOriginRoute = useSettingsStore((s) => s.setOriginRoute);
 	const utils = electronTrpc.useUtils();
 	const shownWorkspaceInitWarningsRef = useRef(new Set<string>());
-	const { isV2CloudEnabled } = useIsV2CloudEnabled();
+	const isV2CloudEnabled = useIsV2CloudEnabled();
+	const requiredComplete = useOnboardingStore(selectRequiredStepsComplete);
+	const firstIncompleteStep = useOnboardingStore(selectFirstIncompleteStep);
 
 	const isSignedIn = env.SKIP_ENV_VALIDATION || !!session?.user;
 	const activeOrganizationId = env.SKIP_ENV_VALIDATION
@@ -66,16 +76,32 @@ function AuthenticatedLayout() {
 	useAgentHookListener();
 	useUpdateListener();
 
-	// One-time migration from old hotkey storage to new localStorage-based store
-	useEffect(() => {
-		void migrateHotkeyOverrides().catch((error) => {
-			console.error("[hotkeys] Migration failed:", error);
-		});
-	}, []);
-
 	// Update workspace-run pane state on terminal exit
 	electronTrpc.notifications.subscribe.useSubscription(undefined, {
 		onData: (event) => {
+			if (
+				event.type === NOTIFICATION_EVENTS.FOCUS_V2_NOTIFICATION_SOURCE &&
+				event.data
+			) {
+				localStorage.setItem("lastViewedWorkspaceId", event.data.workspaceId);
+				const source = event.data.source;
+				void navigate({
+					to: "/v2-workspace/$workspaceId",
+					params: { workspaceId: event.data.workspaceId },
+					search:
+						source.type === "terminal"
+							? {
+									terminalId: source.id,
+									focusRequestId: crypto.randomUUID(),
+								}
+							: {
+									chatSessionId: source.id,
+									focusRequestId: crypto.randomUUID(),
+								},
+				});
+				return;
+			}
+
 			if (
 				event.type !== NOTIFICATION_EVENTS.TERMINAL_EXIT ||
 				!event.data?.paneId
@@ -178,27 +204,36 @@ function AuthenticatedLayout() {
 		return <Navigate to="/create-organization" replace />;
 	}
 
+	const isOnSetupRoute = location.pathname.startsWith("/setup");
+	if (isV2CloudEnabled && !requiredComplete && !isOnSetupRoute) {
+		return <Navigate to={STEP_ROUTES[firstIncompleteStep]} replace />;
+	}
+
 	return (
 		<DndProvider manager={dragDropManager}>
 			<CollectionsProvider>
-				<GlobalTerminalLifecycle />
+				<GlobalBrowserLifecycle />
 				<LocalHostServiceProvider>
-					<WorkerPoolContextProvider
-						poolOptions={{ workerFactory: createPierreWorker, poolSize: 8 }}
-						highlighterOptions={{ preferredHighlighter: "shiki-wasm" }}
-					>
-						<AgentHooks />
-						<Outlet />
-						<WorkspaceInitEffects />
-						{isV2CloudEnabled ? (
-							<DashboardNewWorkspaceModal />
-						) : (
-							<NewWorkspaceModal />
-						)}
-						<InitGitDialog />
-						<TeardownLogsDialog />
-						<Paywall />
-					</WorkerPoolContextProvider>
+					<DeletingWorkspacesProvider>
+						<WorkerPoolContextProvider
+							poolOptions={{ workerFactory: createPierreWorker, poolSize: 8 }}
+							highlighterOptions={{ preferredHighlighter: "shiki-wasm" }}
+						>
+							<AgentHooks />
+							<V2NotificationController />
+							<Outlet />
+							<V1MigrationSummaryModal />
+							<WorkspaceInitEffects />
+							{isV2CloudEnabled ? (
+								<DashboardNewWorkspaceModal />
+							) : (
+								<NewWorkspaceModal />
+							)}
+							<InitGitDialog />
+							<TeardownLogsDialog />
+							<Paywall />
+						</WorkerPoolContextProvider>
+					</DeletingWorkspacesProvider>
 				</LocalHostServiceProvider>
 			</CollectionsProvider>
 		</DndProvider>

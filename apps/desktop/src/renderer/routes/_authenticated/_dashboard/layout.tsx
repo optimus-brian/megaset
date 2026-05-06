@@ -9,16 +9,20 @@ import { useIsV2CloudEnabled } from "renderer/hooks/useIsV2CloudEnabled";
 import { useHotkey } from "renderer/hotkeys";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { DashboardSidebar } from "renderer/routes/_authenticated/_dashboard/components/DashboardSidebar";
+import { useDevSeedV2Sidebar } from "renderer/routes/_authenticated/hooks/useDevSeedV2Sidebar";
+import { useMigrateV1DataToV2 } from "renderer/routes/_authenticated/hooks/useMigrateV1DataToV2";
 import { ResizablePanel } from "renderer/screens/main/components/ResizablePanel";
 import { WorkspaceSidebar } from "renderer/screens/main/components/WorkspaceSidebar";
 import { DeleteWorkspaceDialog } from "renderer/screens/main/components/WorkspaceSidebar/WorkspaceListItem/components";
 import { useOpenNewWorkspaceModal } from "renderer/stores/new-workspace-modal";
+import { WorkspaceCreatesManager } from "renderer/stores/workspace-creates";
 import {
 	COLLAPSED_WORKSPACE_SIDEBAR_WIDTH,
 	DEFAULT_WORKSPACE_SIDEBAR_WIDTH,
 	MAX_WORKSPACE_SIDEBAR_WIDTH,
 	useWorkspaceSidebarStore,
 } from "renderer/stores/workspace-sidebar-state";
+import { AddRepositoryModals } from "./components/AddRepositoryModals";
 import { TopBar } from "./components/TopBar";
 
 export const Route = createFileRoute("/_authenticated/_dashboard")({
@@ -28,7 +32,9 @@ export const Route = createFileRoute("/_authenticated/_dashboard")({
 function DashboardLayout() {
 	const navigate = useNavigate();
 	const openNewWorkspaceModal = useOpenNewWorkspaceModal();
-	const { isV2CloudEnabled } = useIsV2CloudEnabled();
+	const isV2CloudEnabled = useIsV2CloudEnabled();
+	useDevSeedV2Sidebar();
+	useMigrateV1DataToV2();
 	// Get current workspace from route to pre-select project in new workspace modal
 	const matchRoute = useMatchRoute();
 	const currentWorkspaceMatch = matchRoute({
@@ -88,50 +94,65 @@ function DashboardLayout() {
 		{ enabled: !!currentWorkspaceId },
 	);
 
+	const sidebarPanel = isWorkspaceSidebarOpen && (
+		<ResizablePanel
+			width={workspaceSidebarWidth}
+			onWidthChange={setWorkspaceSidebarWidth}
+			isResizing={isWorkspaceSidebarResizing}
+			onResizingChange={setWorkspaceSidebarIsResizing}
+			minWidth={COLLAPSED_WORKSPACE_SIDEBAR_WIDTH}
+			maxWidth={MAX_WORKSPACE_SIDEBAR_WIDTH}
+			handleSide="right"
+			clampWidth={false}
+			onDoubleClickHandle={() =>
+				setWorkspaceSidebarWidth(DEFAULT_WORKSPACE_SIDEBAR_WIDTH)
+			}
+		>
+			{isV2CloudEnabled ? (
+				<DashboardSidebar isCollapsed={isWorkspaceSidebarCollapsed()} />
+			) : (
+				<WorkspaceSidebar
+					isCollapsed={isWorkspaceSidebarCollapsed()}
+					activeProjectId={currentWorkspace?.projectId ?? null}
+					activeProjectName={currentWorkspace?.project?.name ?? null}
+				/>
+			)}
+		</ResizablePanel>
+	);
+
+	// Only lift the sidebar out of the TopBar column when v2 + expanded.
+	// Collapsed/closed sidebars stay inside so the TopBar runs full-width.
+	const sidebarOutsideColumn =
+		isV2CloudEnabled &&
+		isWorkspaceSidebarOpen &&
+		!isWorkspaceSidebarCollapsed();
+
 	return (
-		<div className="flex flex-col h-full w-full">
-			<TopBar />
-			<div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
-				{isWorkspaceSidebarOpen && (
-					<ResizablePanel
-						width={workspaceSidebarWidth}
-						onWidthChange={setWorkspaceSidebarWidth}
-						isResizing={isWorkspaceSidebarResizing}
-						onResizingChange={setWorkspaceSidebarIsResizing}
-						minWidth={COLLAPSED_WORKSPACE_SIDEBAR_WIDTH}
-						maxWidth={MAX_WORKSPACE_SIDEBAR_WIDTH}
-						handleSide="right"
-						clampWidth={false}
-						onDoubleClickHandle={() =>
-							setWorkspaceSidebarWidth(DEFAULT_WORKSPACE_SIDEBAR_WIDTH)
-						}
-					>
-						{isV2CloudEnabled ? (
-							<DashboardSidebar isCollapsed={isWorkspaceSidebarCollapsed()} />
-						) : (
-							<WorkspaceSidebar
-								isCollapsed={isWorkspaceSidebarCollapsed()}
-								activeProjectId={currentWorkspace?.projectId ?? null}
-								activeProjectName={currentWorkspace?.project?.name ?? null}
-							/>
-						)}
-					</ResizablePanel>
-				)}
-				<div className="flex flex-1 min-h-0 min-w-0">
-					<Outlet />
+		<div className="flex h-full w-full overflow-hidden">
+			<WorkspaceCreatesManager />
+			{sidebarOutsideColumn && sidebarPanel}
+			<div className="flex flex-1 flex-col min-w-0 min-h-0">
+				<TopBar />
+				<div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+					{!sidebarOutsideColumn && sidebarPanel}
+					<div className="flex flex-1 min-h-0 min-w-0">
+						<Outlet />
+					</div>
 				</div>
-				{deleteTarget && (
-					<DeleteWorkspaceDialog
-						workspaceId={deleteTarget.workspaceId}
-						workspaceName={deleteTarget.workspaceName}
-						workspaceType={deleteTarget.workspaceType}
-						open={true}
-						onOpenChange={(open) => {
-							if (!open) setDeleteTarget(null);
-						}}
-					/>
-				)}
 			</div>
+			<div id="workspace-right-sidebar-slot" className="flex h-full shrink-0" />
+			<AddRepositoryModals />
+			{deleteTarget && (
+				<DeleteWorkspaceDialog
+					workspaceId={deleteTarget.workspaceId}
+					workspaceName={deleteTarget.workspaceName}
+					workspaceType={deleteTarget.workspaceType}
+					open={true}
+					onOpenChange={(open) => {
+						if (!open) setDeleteTarget(null);
+					}}
+				/>
+			)}
 		</div>
 	);
 }

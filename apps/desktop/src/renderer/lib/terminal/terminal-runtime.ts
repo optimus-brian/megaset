@@ -3,24 +3,18 @@ import type { ProgressAddon } from "@xterm/addon-progress";
 import type { SearchAddon } from "@xterm/addon-search";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { Terminal as XTerm } from "@xterm/xterm";
-import { resolveHotkeyFromEvent } from "renderer/hotkeys";
 import { DEFAULT_TERMINAL_SCROLLBACK } from "shared/constants";
 import type { TerminalAppearance } from "./appearance";
 import { loadAddons } from "./terminal-addons";
+import { installTerminalKeyEventHandler } from "./terminal-key-event-handler";
+import { getTerminalParkingContainer } from "./terminal-parking";
 
 const SERIALIZE_SCROLLBACK = 1000;
 const STORAGE_KEY_PREFIX = "terminal-buffer:";
 const DIMS_KEY_PREFIX = "terminal-dims:";
 const DEFAULT_COLS = 120;
 const DEFAULT_ROWS = 32;
-
-// xterm's _keyDown calls stopPropagation after processing, which kills the
-// bubble to react-hotkeys-hook. Returning false from the custom handler makes
-// xterm bail before that, so app hotkeys reach document. (VSCode pattern:
-// terminalInstance.ts:1116-1175)
-function isAppHotkey(event: KeyboardEvent): boolean {
-	return resolveHotkeyFromEvent(event) !== null;
-}
+const RESIZE_DEBOUNCE_MS = 75;
 
 export interface TerminalRuntime {
 	terminalId: string;
@@ -32,6 +26,7 @@ export interface TerminalRuntime {
 	wrapper: HTMLDivElement;
 	container: HTMLDivElement | null;
 	resizeObserver: ResizeObserver | null;
+	_disposeResizeObserver: (() => void) | null;
 	lastCols: number;
 	lastRows: number;
 	_disposeAddons: (() => void) | null;
@@ -124,16 +119,76 @@ function hostIsVisible(container: HTMLDivElement | null): boolean {
 	return container.clientWidth > 0 && container.clientHeight > 0;
 }
 
-function measureAndResize(runtime: TerminalRuntime) {
-	if (!hostIsVisible(runtime.container)) return;
+function measureAndResize(runtime: TerminalRuntime): boolean {
+	if (!hostIsVisible(runtime.container)) return false;
+	const { terminal } = runtime;
+	const buffer = terminal.buffer.active;
+	const wasPinnedToBottom = buffer.viewportY >= buffer.baseY;
+	const savedViewportY = buffer.viewportY;
+	const prevCols = terminal.cols;
+	const prevRows = terminal.rows;
+
 	runtime.fitAddon.fit();
-	runtime.lastCols = runtime.terminal.cols;
-	runtime.lastRows = runtime.terminal.rows;
+	runtime.lastCols = terminal.cols;
+	runtime.lastRows = terminal.rows;
+
+	if (wasPinnedToBottom) {
+		terminal.scrollToBottom();
+	} else {
+		const targetY = Math.min(savedViewportY, terminal.buffer.active.baseY);
+		if (terminal.buffer.active.viewportY !== targetY) {
+			terminal.scrollToLine(targetY);
+		}
+	}
+
+	terminal.refresh(0, Math.max(0, terminal.rows - 1));
+
+	return terminal.cols !== prevCols || terminal.rows !== prevRows;
+}
+
+function createResizeScheduler(
+	runtime: TerminalRuntime,
+	onResize?: () => void,
+): {
+	observe: ResizeObserverCallback;
+	dispose: () => void;
+} {
+	let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+	const dispose = () => {
+		if (timeoutId !== null) {
+			clearTimeout(timeoutId);
+			timeoutId = null;
+		}
+	};
+
+	const run = () => {
+		timeoutId = null;
+		const changed = measureAndResize(runtime);
+		if (changed) onResize?.();
+	};
+
+	const observe: ResizeObserverCallback = (entries) => {
+		if (
+			entries.some(
+				(entry) =>
+					entry.contentRect.width <= 0 || entry.contentRect.height <= 0,
+			)
+		) {
+			dispose();
+			return;
+		}
+		dispose();
+		timeoutId = setTimeout(run, RESIZE_DEBOUNCE_MS);
+	};
+
+	return { observe, dispose };
 }
 
 export function createRuntime(
 	terminalId: string,
 	appearance: TerminalAppearance,
+	options: { initialBuffer?: string } = {},
 ): TerminalRuntime {
 	const savedDims = loadSavedDimensions(terminalId);
 	const cols = savedDims?.cols ?? DEFAULT_COLS;
@@ -149,11 +204,17 @@ export function createRuntime(
 	wrapper.style.width = "100%";
 	wrapper.style.height = "100%";
 	terminal.open(wrapper);
-	restoreBuffer(terminalId, terminal);
 
-	terminal.attachCustomKeyEventHandler((event) => !isAppHotkey(event));
+	installTerminalKeyEventHandler(terminal);
 
+	// Activate Unicode 11 widths (inside loadAddons) before restoring the buffer,
+	// else CJK/emoji/ZWJ widths get baked wrong into the replay. (#3572)
 	const addonsResult = loadAddons(terminal);
+	if (options.initialBuffer !== undefined) {
+		terminal.write(options.initialBuffer);
+	} else {
+		restoreBuffer(terminalId, terminal);
+	}
 
 	return {
 		terminalId,
@@ -165,6 +226,7 @@ export function createRuntime(
 		wrapper,
 		container: null,
 		resizeObserver: null,
+		_disposeResizeObserver: null,
 		lastCols: cols,
 		lastRows: rows,
 		_disposeAddons: addonsResult.dispose,
@@ -176,20 +238,28 @@ export function attachToContainer(
 	container: HTMLDivElement,
 	onResize?: () => void,
 ) {
+	// If we're already attached to this exact container, do nothing. Prevents
+	// redundant refresh/focus/fit from transient remounts during provider key
+	// churn — VSCode setVisible() is idempotent for the same host element.
+	const sameContainer =
+		runtime.container === container &&
+		runtime.wrapper.parentElement === container;
+	if (sameContainer && runtime.resizeObserver) {
+		return;
+	}
+
 	runtime.container = container;
 	container.appendChild(runtime.wrapper);
-	measureAndResize(runtime);
+	if (measureAndResize(runtime)) onResize?.();
 
-	// Renderer may have skipped frames while the wrapper was detached.
-	runtime.terminal.refresh(0, runtime.terminal.rows - 1);
-
+	runtime._disposeResizeObserver?.();
+	runtime._disposeResizeObserver = null;
 	runtime.resizeObserver?.disconnect();
-	const observer = new ResizeObserver(() => {
-		measureAndResize(runtime);
-		onResize?.();
-	});
+	const scheduler = createResizeScheduler(runtime, onResize);
+	const observer = new ResizeObserver(scheduler.observe);
 	observer.observe(container);
 	runtime.resizeObserver = observer;
+	runtime._disposeResizeObserver = scheduler.dispose;
 
 	runtime.terminal.focus();
 }
@@ -197,9 +267,13 @@ export function attachToContainer(
 export function detachFromContainer(runtime: TerminalRuntime) {
 	persistBuffer(runtime.terminalId, runtime.serializeAddon);
 	persistDimensions(runtime.terminalId, runtime.lastCols, runtime.lastRows);
+	runtime._disposeResizeObserver?.();
+	runtime._disposeResizeObserver = null;
 	runtime.resizeObserver?.disconnect();
 	runtime.resizeObserver = null;
-	runtime.wrapper.remove();
+	// Park instead of .remove() so xterm survives the React unmount —
+	// see getTerminalParkingContainer.
+	getTerminalParkingContainer().appendChild(runtime.wrapper);
 	runtime.container = null;
 }
 
@@ -207,7 +281,7 @@ export function updateRuntimeAppearance(
 	runtime: TerminalRuntime,
 	appearance: TerminalAppearance,
 ) {
-	const { terminal, fitAddon } = runtime;
+	const { terminal } = runtime;
 	terminal.options.theme = appearance.theme;
 
 	const fontChanged =
@@ -218,20 +292,30 @@ export function updateRuntimeAppearance(
 		terminal.options.fontFamily = appearance.fontFamily;
 		terminal.options.fontSize = appearance.fontSize;
 		if (hostIsVisible(runtime.container)) {
-			fitAddon.fit();
-			runtime.lastCols = terminal.cols;
-			runtime.lastRows = terminal.rows;
+			measureAndResize(runtime);
 		}
 	}
 }
 
-export function disposeRuntime(runtime: TerminalRuntime) {
+export function disposeRuntime(
+	runtime: TerminalRuntime,
+	options: { clearPersistedState?: boolean } = {},
+) {
+	const clearPersistedState = options.clearPersistedState ?? true;
+	if (!clearPersistedState) {
+		persistBuffer(runtime.terminalId, runtime.serializeAddon);
+		persistDimensions(runtime.terminalId, runtime.lastCols, runtime.lastRows);
+	}
 	runtime._disposeAddons?.();
 	runtime._disposeAddons = null;
+	runtime._disposeResizeObserver?.();
+	runtime._disposeResizeObserver = null;
 	runtime.resizeObserver?.disconnect();
 	runtime.resizeObserver = null;
 	runtime.wrapper.remove();
 	runtime.terminal.dispose();
-	clearPersistedBuffer(runtime.terminalId);
-	clearPersistedDimensions(runtime.terminalId);
+	if (clearPersistedState) {
+		clearPersistedBuffer(runtime.terminalId);
+		clearPersistedDimensions(runtime.terminalId);
+	}
 }

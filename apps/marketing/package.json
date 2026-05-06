@@ -6,11 +6,12 @@
 	"scripts": {
 		"build": "next build",
 		"clean": "git clean -xdf .cache .next .turbo node_modules",
-		"dev": "dotenv -e ../../.env -- sh -c 'next dev --port ${MARKETING_PORT:-3002}'",
+		"dev": "dotenv -e ../../.env -- sh -c 'exec next dev --port ${MARKETING_PORT:-3002}'",
 		"start": "next start",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@paper-design/shaders-react": "^0.0.76",
 		"@react-three/drei": "^10.7.6",
 		"@react-three/fiber": "^9.4.0",
 		"@sentry/nextjs": "^10.36.0",

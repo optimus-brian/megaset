@@ -1,5 +1,7 @@
 import {
 	agentCommands,
+	automationRuns,
+	automations,
 	chatSessions,
 	devicePresence,
 	githubPullRequests,
@@ -9,7 +11,6 @@ import {
 	members,
 	organizations,
 	projects,
-	sessionHosts,
 	subscriptions,
 	taskStatuses,
 	tasks,
@@ -127,9 +128,6 @@ export function buildWhereClause(
 		case "chat_sessions":
 			return build(chatSessions, chatSessions.organizationId, organizationId);
 
-		case "session_hosts":
-			return build(sessionHosts, sessionHosts.organizationId, organizationId);
-
 		case "github_repositories":
 			return build(
 				githubRepositories,
@@ -141,6 +139,16 @@ export function buildWhereClause(
 			return build(
 				githubPullRequests,
 				githubPullRequests.organizationId,
+				organizationId,
+			);
+
+		case "automations":
+			return build(automations, automations.organizationId, organizationId);
+
+		case "automation_runs":
+			return build(
+				automationRuns,
+				automationRuns.organizationId,
 				organizationId,
 			);
 

@@ -1,3 +1,4 @@
+import { Checkbox } from "@superset/ui/checkbox";
 import {
 	Command,
 	CommandEmpty,
@@ -6,20 +7,18 @@ import {
 	CommandItem,
 	CommandList,
 } from "@superset/ui/command";
-import { Popover, PopoverAnchor, PopoverContent } from "@superset/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@superset/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
-import type React from "react";
-import type { RefObject } from "react";
-import { useState } from "react";
-import { env } from "renderer/env.renderer";
+import type { ReactNode } from "react";
+import { useId, useState } from "react";
+import { useHostUrl } from "renderer/hooks/host-service/useHostTargetUrl";
 import { useDebouncedValue } from "renderer/hooks/useDebouncedValue";
 import { getHostServiceClientByUrl } from "renderer/lib/host-service-client";
-import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
 import {
 	IssueIcon,
 	type IssueState,
 } from "renderer/screens/main/components/IssueIcon/IssueIcon";
-import type { WorkspaceHostTarget } from "../../../components/DevicePicker";
 
 const MAX_RESULTS = 30;
 
@@ -34,34 +33,30 @@ export interface SelectedIssue {
 }
 
 interface GitHubIssueLinkCommandProps {
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
+	children: ReactNode;
+	tooltipLabel: string;
 	onSelect: (issue: SelectedIssue) => void;
 	projectId: string | null;
-	hostTarget: WorkspaceHostTarget;
-	anchorRef: RefObject<HTMLElement | null>;
+	hostId: string | null;
 }
 
 export function GitHubIssueLinkCommand({
-	open,
-	onOpenChange,
+	children,
+	tooltipLabel,
 	onSelect,
 	projectId,
-	hostTarget,
-	anchorRef,
+	hostId,
 }: GitHubIssueLinkCommandProps) {
+	const [open, setOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [showClosed, setShowClosed] = useState(false);
+	const showClosedId = useId();
 	const debouncedQuery = useDebouncedValue(searchQuery, 300);
-	const { activeHostUrl } = useLocalHostService();
+	const hostUrl = useHostUrl(hostId);
 
 	const trimmedQuery = searchQuery.trim();
 	const debouncedTrimmed = debouncedQuery.trim();
 	const isPendingDebounce = trimmedQuery !== debouncedTrimmed;
-
-	const hostUrl =
-		hostTarget.kind === "local"
-			? activeHostUrl
-			: `${env.RELAY_URL}/hosts/${hostTarget.hostId}`;
 
 	const { data, isFetching } = useQuery({
 		queryKey: [
@@ -70,6 +65,7 @@ export function GitHubIssueLinkCommand({
 			projectId,
 			hostUrl,
 			debouncedTrimmed,
+			showClosed,
 		],
 		queryFn: async () => {
 			if (!hostUrl || !projectId) return { issues: [] };
@@ -78,6 +74,7 @@ export function GitHubIssueLinkCommand({
 				projectId,
 				query: debouncedTrimmed || undefined,
 				limit: MAX_RESULTS,
+				includeClosed: showClosed,
 			});
 		},
 		enabled: !!projectId && !!hostUrl && open,
@@ -92,11 +89,6 @@ export function GitHubIssueLinkCommand({
 			? isFetching || isPendingDebounce
 			: isFetching;
 
-	const handleClose = () => {
-		setSearchQuery("");
-		onOpenChange(false);
-	};
-
 	const handleSelect = (issue: (typeof searchResults)[number]) => {
 		onSelect({
 			issueNumber: issue.issueNumber,
@@ -104,20 +96,29 @@ export function GitHubIssueLinkCommand({
 			url: issue.url,
 			state: issue.state,
 		});
-		handleClose();
+		setSearchQuery("");
+		setOpen(false);
 	};
 
 	return (
-		<Popover open={open}>
-			<PopoverAnchor virtualRef={anchorRef as React.RefObject<Element>} />
+		<Popover
+			open={open}
+			onOpenChange={(next) => {
+				if (!next) setSearchQuery("");
+				setOpen(next);
+			}}
+		>
+			<Tooltip>
+				<PopoverTrigger asChild>
+					<TooltipTrigger asChild>{children}</TooltipTrigger>
+				</PopoverTrigger>
+				<TooltipContent side="bottom">{tooltipLabel}</TooltipContent>
+			</Tooltip>
 			<PopoverContent
 				className="w-80 p-0"
 				align="start"
 				side="bottom"
 				onWheel={(event) => event.stopPropagation()}
-				onPointerDownOutside={handleClose}
-				onEscapeKeyDown={handleClose}
-				onFocusOutside={(e) => e.preventDefault()}
 			>
 				<Command shouldFilter={false}>
 					<CommandInput
@@ -125,6 +126,19 @@ export function GitHubIssueLinkCommand({
 						value={searchQuery}
 						onValueChange={setSearchQuery}
 					/>
+					<div className="flex items-center gap-2 border-b px-3 py-2">
+						<Checkbox
+							id={showClosedId}
+							checked={showClosed}
+							onCheckedChange={(checked) => setShowClosed(checked === true)}
+						/>
+						<label
+							htmlFor={showClosedId}
+							className="cursor-pointer select-none text-xs text-muted-foreground"
+						>
+							Show closed
+						</label>
+					</div>
 					<CommandList className="max-h-[280px]">
 						{searchResults.length === 0 && (
 							<CommandEmpty>
@@ -135,8 +149,12 @@ export function GitHubIssueLinkCommand({
 									: repoMismatch
 										? `Issue URL must match ${repoMismatch}.`
 										: debouncedTrimmed
-											? "No issues found."
-											: "No issues found."}
+											? showClosed
+												? "No issues found."
+												: "No open issues found."
+											: showClosed
+												? "No issues found."
+												: "No open issues found."}
 							</CommandEmpty>
 						)}
 						{searchResults.length > 0 && (
@@ -144,7 +162,9 @@ export function GitHubIssueLinkCommand({
 								heading={
 									debouncedTrimmed
 										? `${searchResults.length} result${searchResults.length === 1 ? "" : "s"}`
-										: "Recent issues"
+										: showClosed
+											? "Recent issues"
+											: "Open issues"
 								}
 							>
 								{searchResults.map((issue) => (

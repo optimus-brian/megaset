@@ -40,6 +40,10 @@ SKIP_ENV_VALIDATION=1 NODE_ENV=development bun x cross-env NODE_ENV=development 
 For Electron interprocess communication, ALWAYS use trpc as defined in `src/lib/trpc`
 Please use alias as defined in `tsconfig.json` when possible
 
+## Error text must be selectable
+
+The renderer sets `user-select: none` on `body`, so rendered errors need explicit `select-text cursor-text` classes — otherwise users can't copy them into bug reports. (Sonner toasts are exempt; they manage selection themselves.)
+
 ## tRPC Subscriptions (trpc-electron)
 
 **Important:** While standard tRPC recommends async generators for subscriptions, `trpc-electron` (used for Electron IPC) **only supports observables**. The library explicitly checks `isObservable(result)` and throws an error otherwise. Use the `observable` pattern:

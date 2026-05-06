@@ -41,8 +41,12 @@ export function asRemoteRef(
 
 async function refExists(git: SimpleGit, fullRef: string): Promise<boolean> {
 	try {
-		await git.raw(["rev-parse", "--verify", "--quiet", `${fullRef}^{commit}`]);
-		return true;
+		// Don't use `--quiet` — simple-git's `raw` mis-resolves on empty
+		// stderr and reports the missing ref as a success with empty stdout.
+		// Without `--quiet`, git writes the error to stderr and simple-git
+		// rejects as expected. We then verify a sha was actually printed.
+		const out = await git.raw(["rev-parse", "--verify", `${fullRef}^{commit}`]);
+		return /^[0-9a-f]{40,}/.test(out.trim());
 	} catch {
 		return false;
 	}
@@ -141,5 +145,27 @@ export async function resolveDefaultBranchName(
 		return ref.trim().replace(/^origin\//, "");
 	} catch {
 		return "main";
+	}
+}
+
+/**
+ * Resolve a local branch's upstream tracking info (`branch.<name>.remote`
+ * / `branch.<name>.merge`). Returns `null` if no upstream is configured.
+ */
+export async function resolveUpstream(
+	git: SimpleGit,
+	branch: string,
+): Promise<{ remote: string; remoteBranch: string } | null> {
+	try {
+		const [remote, merge] = await Promise.all([
+			git.raw(["config", "--get", `branch.${branch}.remote`]),
+			git.raw(["config", "--get", `branch.${branch}.merge`]),
+		]);
+		const remoteBranch = merge.trim().replace(/^refs\/heads\//, "");
+		const remoteName = remote.trim();
+		if (!remoteName || !remoteBranch) return null;
+		return { remote: remoteName, remoteBranch };
+	} catch {
+		return null;
 	}
 }

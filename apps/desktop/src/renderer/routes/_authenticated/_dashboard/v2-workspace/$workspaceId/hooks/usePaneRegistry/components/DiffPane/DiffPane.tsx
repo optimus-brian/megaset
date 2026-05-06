@@ -1,12 +1,10 @@
 import { useVirtualizer, Virtualizer } from "@pierre/diffs/react";
 import type { RendererContext } from "@superset/panes";
-import { toast } from "@superset/ui/sonner";
-import { workspaceTrpc } from "@superset/workspace-client";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { electronTrpcClient } from "renderer/lib/trpc-client";
 import { useSettings } from "renderer/stores/settings";
 import type { DiffPaneData, PaneViewerData } from "../../../../types";
 import { useChangeset } from "../../../useChangeset";
+import { useOpenInExternalEditor } from "../../../useOpenInExternalEditor";
 import { useSidebarDiffRef } from "../../../useSidebarDiffRef";
 import { useViewedFiles } from "../../../useViewedFiles";
 import { DiffFileEntry } from "./components/DiffFileEntry";
@@ -43,9 +41,10 @@ function ScrollToFile({ path }: { path: string }) {
 interface DiffPaneProps {
 	context: RendererContext<PaneViewerData>;
 	workspaceId: string;
+	onOpenFile: (path: string, openInNewTab?: boolean) => void;
 }
 
-export function DiffPane({ context, workspaceId }: DiffPaneProps) {
+export function DiffPane({ context, workspaceId, onOpenFile }: DiffPaneProps) {
 	const data = context.pane.data as DiffPaneData;
 
 	const diffStyle = useSettings((s) => s.diffStyle);
@@ -55,29 +54,16 @@ export function DiffPane({ context, workspaceId }: DiffPaneProps) {
 
 	const { viewedSet, setViewed } = useViewedFiles(workspaceId);
 
-	const workspaceQuery = workspaceTrpc.workspace.get.useQuery({
-		id: workspaceId,
-	});
-	const worktreePath = workspaceQuery.data?.worktreePath;
-	const projectId = workspaceQuery.data?.projectId;
-	const openFile = useCallback(
-		(path: string) => {
-			if (!worktreePath) return;
-			electronTrpcClient.external.openFileInEditor
-				.mutate({ path, cwd: worktreePath, projectId })
-				.catch((err) => {
-					toast.error("Couldn't open file", {
-						description: err instanceof Error ? err.message : String(err),
-					});
-				});
-		},
-		[worktreePath, projectId],
-	);
+	const openInExternalEditor = useOpenInExternalEditor(workspaceId);
 
 	// O(1) collapsed lookup per child instead of Array.includes.
 	const collapsedSet = useMemo(
 		() => new Set(data.collapsedFiles ?? []),
 		[data.collapsedFiles],
+	);
+	const expandedSet = useMemo(
+		() => new Set(data.expandedFiles ?? []),
+		[data.expandedFiles],
 	);
 
 	// Stable callback via refs — identity does not churn as collapsedFiles
@@ -98,20 +84,30 @@ export function DiffPane({ context, workspaceId }: DiffPaneProps) {
 		},
 		[updateData],
 	);
+	const setExpanded = useCallback(
+		(path: string, value: boolean) => {
+			const current = dataRef.current;
+			const expanded = current.expandedFiles ?? [];
+			const has = expanded.includes(path);
+			if (value === has) return;
+			const next = value
+				? [...expanded, path]
+				: expanded.filter((p) => p !== path);
+			updateData({ ...current, expandedFiles: next } as PaneViewerData);
+		},
+		[updateData],
+	);
 
-	if (!isLoading && files.length === 0) {
+	if (files.length === 0) {
 		return (
 			<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-				No changes
+				{isLoading ? "Loading…" : "No changes"}
 			</div>
 		);
 	}
 
 	return (
-		<Virtualizer
-			className="h-full w-full overflow-auto"
-			contentClassName="space-y-2 px-2 py-2"
-		>
+		<Virtualizer className="h-full w-full overflow-auto">
 			<ScrollToFile path={data.path} />
 			{files.map((file) => (
 				<DiffFileEntry
@@ -121,9 +117,12 @@ export function DiffPane({ context, workspaceId }: DiffPaneProps) {
 					diffStyle={diffStyle}
 					collapsed={collapsedSet.has(file.path)}
 					onSetCollapsed={setCollapsed}
+					expanded={expandedSet.has(file.path)}
+					onSetExpanded={setExpanded}
 					viewed={viewedSet.has(file.path)}
 					onSetViewed={setViewed}
-					onOpenFile={openFile}
+					onOpenFile={onOpenFile}
+					onOpenInExternalEditor={openInExternalEditor}
 				/>
 			))}
 		</Virtualizer>

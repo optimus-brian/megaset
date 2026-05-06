@@ -18,6 +18,7 @@ import { GoGitBranch } from "react-icons/go";
 import { HiCheck, HiChevronUpDown } from "react-icons/hi2";
 import { formatRelativeTime } from "renderer/lib/formatRelativeTime";
 import type { BranchFilter, BranchRow } from "../../../hooks/useBranchContext";
+import { FormPickerTrigger } from "../FormPickerTrigger";
 
 interface CompareBaseBranchPickerProps {
 	effectiveCompareBaseBranch: string | null;
@@ -38,7 +39,6 @@ interface CompareBaseBranchPickerProps {
 	) => void;
 	onCheckoutBranch: (branchName: string) => void;
 	onOpenExisting: (branchName: string) => void;
-	onAdoptWorktree: (branchName: string) => void;
 	// Authoritative (cloud-synced) answer to "does a workspace row exist for
 	// this branch on this host?". Computed from the v2Workspaces collection
 	// so it stays in sync with soft-deletes. Trumps any server-side
@@ -62,7 +62,6 @@ export function CompareBaseBranchPicker({
 	onSelectCompareBaseBranch,
 	onCheckoutBranch,
 	onOpenExisting,
-	onAdoptWorktree,
 	hasWorkspaceForBranch,
 }: CompareBaseBranchPickerProps) {
 	const [open, setOpen] = useState(false);
@@ -107,10 +106,9 @@ export function CompareBaseBranchPicker({
 			}}
 		>
 			<PopoverTrigger asChild>
-				<button
-					type="button"
+				<FormPickerTrigger
 					disabled={isBranchesLoading && branches.length === 0}
-					className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 min-w-0 max-w-full"
+					className="max-w-full"
 				>
 					<GoGitBranch className="size-3 shrink-0" />
 					{isBranchesLoading && branches.length === 0 ? (
@@ -121,7 +119,7 @@ export function CompareBaseBranchPicker({
 						</span>
 					)}
 					<HiChevronUpDown className="size-3 shrink-0" />
-				</button>
+				</FormPickerTrigger>
 			</PopoverTrigger>
 			<PopoverContent
 				className="w-96 p-0"
@@ -140,8 +138,8 @@ export function CompareBaseBranchPicker({
 						className="p-2"
 					>
 						<TabsList className="grid w-full grid-cols-2 h-7 bg-transparent">
-							<TabsTrigger value="branch" className="text-[11px]">
-								Branch
+							<TabsTrigger value="all" className="text-[11px]">
+								All
 							</TabsTrigger>
 							<TabsTrigger value="worktree" className="text-[11px]">
 								Worktree
@@ -155,6 +153,7 @@ export function CompareBaseBranchPicker({
 							)}
 							{branches.map((branch) => {
 								const isRemoteOnly = branch.isRemote && !branch.isLocal;
+								const isWorktree = Boolean(branch.worktreePath);
 								return (
 									<CommandItem
 										key={branch.name}
@@ -186,6 +185,11 @@ export function CompareBaseBranchPicker({
 														remote
 													</span>
 												)}
+												{isWorktree && (
+													<span className="text-[10px] text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded">
+														worktree
+													</span>
+												)}
 											</span>
 										</span>
 										<span className="flex items-center gap-2 shrink-0">
@@ -194,7 +198,7 @@ export function CompareBaseBranchPicker({
 													{formatRelativeTime(branch.lastCommitDate * 1000)}
 												</span>
 											)}
-											{branchFilter === "worktree" ? (
+											{isWorktree ? (
 												(() => {
 													// Authoritative check against the cloud-synced
 													// collection — a `server hasWorkspace:true` row
@@ -211,7 +215,7 @@ export function CompareBaseBranchPicker({
 																if (hasWorkspace) {
 																	onOpenExisting(branch.name);
 																} else {
-																	onAdoptWorktree(branch.name);
+																	onCheckoutBranch(branch.name);
 																}
 															}}
 														>

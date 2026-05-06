@@ -1,20 +1,44 @@
+import { primeRelayAffinity } from "@superset/workspace-client";
 import type { Terminal as XTerm } from "@xterm/xterm";
 
 export type ConnectionState = "disconnected" | "connecting" | "open" | "closed";
 
+export type TerminalLogLevel = "info" | "warn" | "error";
+
+export interface TerminalLogEntry {
+	id: number;
+	timestamp: number;
+	level: TerminalLogLevel;
+	message: string;
+}
+
+// PTY output bytes arrive as binary WebSocket frames and are fed straight
+// into xterm.write(Uint8Array) — no UTF-8 decoding hop, so multi-byte
+// codepoints that straddle a frame boundary stay intact (xterm.js buffers
+// partial sequences internally). Control messages (title/error/exit) stay
+// JSON.
 type TerminalServerMessage =
-	| { type: "data"; data: string }
+	| { type: "attached"; terminalId: string }
 	| { type: "error"; message: string }
 	| { type: "exit"; exitCode: number; signal: number }
-	| { type: "replay"; data: string };
+	| { type: "title"; title: string | null };
 
 export interface TerminalTransport {
 	socket: WebSocket | null;
 	connectionState: ConnectionState;
 	/** The URL the socket is currently connected (or connecting) to. */
 	currentUrl: string | null;
+	title: string | null | undefined;
 	onDataDisposable: { dispose(): void } | null;
 	stateListeners: Set<() => void>;
+	titleListeners: Set<() => void>;
+	/**
+	 * Transport-level status log (WebSocket close/error/reconnect notices).
+	 * Surfaced to the pane UI instead of being written into the xterm buffer,
+	 * so terminal scrollback stays clean.
+	 */
+	logs: TerminalLogEntry[];
+	logListeners: Set<() => void>;
 	/** Internal: auto-reconnect timer. */
 	_reconnectTimer: ReturnType<typeof setTimeout> | null;
 	/** Internal: reconnect attempt count for backoff. */
@@ -23,7 +47,17 @@ export interface TerminalTransport {
 	_terminal: XTerm | null;
 	/** Set when the server sends an exit message — no reconnect after this. */
 	_exited: boolean;
+	/**
+	 * Flips true after the first PTY-output frame lands in xterm. Subsequent
+	 * connects send `?replay=0` so the server doesn't re-deliver scrollback.
+	 * Tracked on first bytes (not first open) so a WS that opens-and-closes
+	 * with no output still gets replay on the next connect.
+	 */
+	_hasReceivedBytes: boolean;
 }
+
+const MAX_LOG_ENTRIES = 200;
+let logIdCounter = 0;
 
 function setConnectionState(
 	transport: TerminalTransport,
@@ -31,6 +65,50 @@ function setConnectionState(
 ) {
 	transport.connectionState = state;
 	for (const listener of transport.stateListeners) {
+		listener();
+	}
+}
+
+function setTerminalTitle(
+	transport: TerminalTransport,
+	title: string | null | undefined,
+) {
+	if (transport.title === title) return;
+	transport.title = title;
+	for (const listener of transport.titleListeners) {
+		listener();
+	}
+}
+
+function pushLog(
+	transport: TerminalTransport,
+	level: TerminalLogLevel,
+	message: string,
+) {
+	logIdCounter += 1;
+	const entry: TerminalLogEntry = {
+		id: logIdCounter,
+		timestamp: Date.now(),
+		level,
+		message,
+	};
+	const next =
+		transport.logs.length >= MAX_LOG_ENTRIES
+			? [
+					...transport.logs.slice(transport.logs.length - MAX_LOG_ENTRIES + 1),
+					entry,
+				]
+			: [...transport.logs, entry];
+	transport.logs = next;
+	for (const listener of transport.logListeners) {
+		listener();
+	}
+}
+
+export function clearLogs(transport: TerminalTransport) {
+	if (transport.logs.length === 0) return;
+	transport.logs = [];
+	for (const listener of transport.logListeners) {
 		listener();
 	}
 }
@@ -44,11 +122,16 @@ export function createTransport(): TerminalTransport {
 		socket: null,
 		connectionState: "disconnected",
 		currentUrl: null,
+		title: undefined,
 		onDataDisposable: null,
 		stateListeners: new Set(),
+		titleListeners: new Set(),
+		logs: [],
+		logListeners: new Set(),
 		_reconnectTimer: null,
 		_reconnectAttempt: 0,
 		_terminal: null,
+		_hasReceivedBytes: false,
 		_exited: false,
 	};
 }
@@ -84,6 +167,34 @@ function cancelReconnect(transport: TerminalTransport) {
 	}
 }
 
+function formatWsEndpoint(wsUrl: string | null): string {
+	if (!wsUrl) return "unknown endpoint";
+	try {
+		const url = new URL(wsUrl);
+		return `${url.protocol}//${url.host}${url.pathname}`;
+	} catch {
+		return "invalid terminal WebSocket URL";
+	}
+}
+
+function formatCloseDetails(event: CloseEvent): string {
+	const code = event.code || "unknown";
+	const reason = event.reason ? `, reason: ${event.reason}` : "";
+	return `code: ${code}${reason}`;
+}
+
+function appendQueryParam(url: string, key: string, value: string): string {
+	try {
+		const u = new URL(url);
+		u.searchParams.set(key, value);
+		return u.toString();
+	} catch {
+		// URL parse failed (relative url, malformed). Fall back to naive append.
+		const sep = url.includes("?") ? "&" : "?";
+		return `${url}${sep}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+	}
+}
+
 export function connect(
 	transport: TerminalTransport,
 	terminal: XTerm,
@@ -105,18 +216,82 @@ export function connect(
 	transport._terminal = terminal;
 	transport._exited = false;
 	setConnectionState(transport, "connecting");
-	const socket = new WebSocket(wsUrl);
-	transport.socket = socket;
+	const actualUrl = transport._hasReceivedBytes
+		? appendQueryParam(wsUrl, "replay", "0")
+		: wsUrl;
 
+	const openSocket = () => {
+		// Bail if the transport raced into a different URL or was disconnected
+		// while the pre-flight was in flight.
+		if (
+			transport.currentUrl !== wsUrl ||
+			transport.connectionState !== "connecting"
+		) {
+			return;
+		}
+		let socket: WebSocket;
+		try {
+			socket = new WebSocket(actualUrl);
+		} catch (err) {
+			pushLog(
+				transport,
+				"error",
+				`WebSocket construction failed for ${formatWsEndpoint(actualUrl)}: ${
+					err instanceof Error ? err.message : String(err)
+				}`,
+			);
+			setConnectionState(transport, "closed");
+			scheduleReconnect(transport);
+			return;
+		}
+		// Receive PTY bytes as ArrayBuffer (the default would be Blob, which
+		// forces an async read); we want to feed bytes synchronously into
+		// xterm.write to keep render order strict.
+		socket.binaryType = "arraybuffer";
+		transport.socket = socket;
+		attachSocketListeners(transport, terminal, socket);
+	};
+
+	// Pre-flight an HTTP request to lock fly's edge affinity to the owning
+	// machine before the WS upgrade. fly-replay isn't transparent on the
+	// upgrade itself (browser sees 200 → 1006 close), but is on plain HTTP,
+	// so a quick GET avoids the connect → 1006 → reconnect flicker. Skip
+	// for non-/hosts URLs (tests, local dev) so connect stays synchronous.
+	let needsPreFlight = false;
+	try {
+		needsPreFlight = new URL(actualUrl).pathname.startsWith("/hosts/");
+	} catch {
+		needsPreFlight = false;
+	}
+	if (needsPreFlight) {
+		void primeRelayAffinity(actualUrl).then(openSocket);
+	} else {
+		openSocket();
+	}
+}
+
+function attachSocketListeners(
+	transport: TerminalTransport,
+	terminal: XTerm,
+	socket: WebSocket,
+): void {
 	socket.addEventListener("open", () => {
 		if (transport.socket !== socket) return;
 		transport._reconnectAttempt = 0;
-		setConnectionState(transport, "open");
-		sendResize(transport, terminal.cols, terminal.rows);
 	});
 
 	socket.addEventListener("message", (event) => {
 		if (transport.socket !== socket) return;
+
+		// Binary frame = PTY output bytes (data + replay collapsed onto one
+		// channel; renderer treats them identically). Pipe straight into
+		// xterm without any decoding step.
+		if (event.data instanceof ArrayBuffer) {
+			terminal.write(new Uint8Array(event.data));
+			transport._hasReceivedBytes = true;
+			return;
+		}
+
 		let message: TerminalServerMessage;
 		try {
 			message = JSON.parse(String(event.data)) as TerminalServerMessage;
@@ -125,8 +300,14 @@ export function connect(
 			return;
 		}
 
-		if (message.type === "data" || message.type === "replay") {
-			terminal.write(message.data);
+		if (message.type === "title") {
+			setTerminalTitle(transport, message.title);
+			return;
+		}
+
+		if (message.type === "attached") {
+			setConnectionState(transport, "open");
+			sendResize(transport, terminal.cols, terminal.rows);
 			return;
 		}
 
@@ -144,22 +325,38 @@ export function connect(
 		}
 	});
 
-	socket.addEventListener("close", () => {
+	socket.addEventListener("close", (event) => {
 		if (transport.socket !== socket) return;
 		setConnectionState(transport, "closed");
 		transport.socket = null;
+		if (!transport._exited && event.code !== 1000) {
+			const willReconnect =
+				!transport._reconnectTimer &&
+				Boolean(transport.currentUrl && transport._terminal) &&
+				transport._reconnectAttempt < MAX_RECONNECT_ATTEMPTS;
+			pushLog(
+				transport,
+				willReconnect ? "warn" : "error",
+				`WebSocket closed while connected to ${formatWsEndpoint(transport.currentUrl)} (${formatCloseDetails(event)}). ${willReconnect ? "Reconnecting..." : "Max reconnect attempts reached."}`,
+			);
+		}
 		// Auto-reconnect on unexpected close (host-service restart, network blip)
 		scheduleReconnect(transport);
 	});
 
 	socket.addEventListener("error", () => {
 		if (transport.socket !== socket) return;
-		terminal.writeln("\r\n[terminal] websocket error");
+		pushLog(
+			transport,
+			"error",
+			`WebSocket error while connecting to ${formatWsEndpoint(transport.currentUrl)}. Check host-service or relay connectivity.`,
+		);
 	});
 
 	transport.onDataDisposable?.dispose();
 	transport.onDataDisposable = terminal.onData((data) => {
 		if (socket.readyState !== WebSocket.OPEN) return;
+		if (transport.connectionState !== "open") return;
 		socket.send(JSON.stringify({ type: "input", data }));
 	});
 }
@@ -173,6 +370,7 @@ export function disconnect(transport: TerminalTransport) {
 	transport.currentUrl = null;
 	transport._terminal = null;
 	transport._reconnectAttempt = 0;
+	setTerminalTitle(transport, undefined);
 	setConnectionState(transport, "disconnected");
 	transport.onDataDisposable?.dispose();
 	transport.onDataDisposable = null;
@@ -185,12 +383,14 @@ export function sendResize(
 ) {
 	if (!transport.socket || transport.socket.readyState !== WebSocket.OPEN)
 		return;
+	if (transport.connectionState !== "open") return;
 	transport.socket.send(JSON.stringify({ type: "resize", cols, rows }));
 }
 
 export function sendInput(transport: TerminalTransport, data: string) {
 	if (!transport.socket || transport.socket.readyState !== WebSocket.OPEN)
 		return;
+	if (transport.connectionState !== "open") return;
 	transport.socket.send(JSON.stringify({ type: "input", data }));
 }
 
@@ -209,7 +409,11 @@ export function disposeTransport(transport: TerminalTransport) {
 	transport.currentUrl = null;
 	transport._terminal = null;
 	transport._reconnectAttempt = 0;
+	setTerminalTitle(transport, undefined);
 	transport.onDataDisposable?.dispose();
 	transport.onDataDisposable = null;
 	transport.stateListeners.clear();
+	transport.titleListeners.clear();
+	transport.logs = [];
+	transport.logListeners.clear();
 }

@@ -4,6 +4,11 @@ import { MOCK_ORG_ID } from "shared/constants";
 
 export const DEV_CHAT_MODELS: ModelOption[] = [
 	{
+		id: "anthropic/claude-opus-4-7",
+		name: "Opus 4.7",
+		provider: "Anthropic",
+	},
+	{
 		id: "anthropic/claude-opus-4-6",
 		name: "Opus 4.6",
 		provider: "Anthropic",
@@ -17,6 +22,11 @@ export const DEV_CHAT_MODELS: ModelOption[] = [
 		id: "anthropic/claude-haiku-4-5",
 		name: "Haiku 4.5",
 		provider: "Anthropic",
+	},
+	{
+		id: "openai/gpt-5.5",
+		name: "GPT-5.5",
+		provider: "OpenAI",
 	},
 	{
 		id: "openai/gpt-5.4",

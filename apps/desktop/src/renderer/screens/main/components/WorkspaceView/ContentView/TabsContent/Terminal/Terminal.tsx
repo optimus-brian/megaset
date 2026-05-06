@@ -2,16 +2,14 @@ import type { FitAddon } from "@xterm/addon-fit";
 import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal as XTerm } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { electronTrpc } from "renderer/lib/electron-trpc";
+import { sanitizeTerminalFontFamily } from "renderer/lib/terminal/appearance";
 import { buildTerminalCommand } from "renderer/lib/terminal/launch-command";
 import { useTabsStore } from "renderer/stores/tabs/store";
 import { useTerminalTheme } from "renderer/stores/theme";
 import { SessionKilledOverlay } from "./components";
-import {
-	DEFAULT_TERMINAL_FONT_FAMILY,
-	DEFAULT_TERMINAL_FONT_SIZE,
-} from "./config";
+import { DEFAULT_TERMINAL_FONT_SIZE } from "./config";
 import { getDefaultTerminalBg } from "./helpers";
 import {
 	useFileLinkClick,
@@ -291,8 +289,16 @@ export const Terminal = memo(function Terminal({
 		return () => clearTimeout(timeout);
 	}, [connectionError, handleRetryConnection]);
 
+	const handleClearHotkey = useCallback(() => {
+		const xterm = xtermRef.current;
+		if (!xterm) return;
+		xterm.clear();
+		clearScrollbackRef.current({ paneId });
+	}, [paneId, clearScrollbackRef]);
+
 	const { isSearchOpen, setIsSearchOpen } = useTerminalHotkeys({
 		isFocused,
+		onClear: handleClearHotkey,
 		xtermRef,
 	});
 	useEffect(() => {
@@ -334,7 +340,6 @@ export const Terminal = memo(function Terminal({
 		flushPendingEvents,
 		resetModes,
 		isAlternateScreenRef,
-		isBracketedPasteRef,
 		setPaneNameRef,
 		renameUnnamedWorkspaceRef,
 		handleTerminalFocusRef,
@@ -405,8 +410,7 @@ export const Terminal = memo(function Terminal({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: resizeRef is a stable MutableRefObject — .current is read inside the effect, not a dependency
 	useEffect(() => {
 		if (!fontSettings) return;
-		const family =
-			fontSettings.terminalFontFamily || DEFAULT_TERMINAL_FONT_FAMILY;
+		const family = sanitizeTerminalFontFamily(fontSettings.terminalFontFamily);
 		const size = fontSettings.terminalFontSize ?? DEFAULT_TERMINAL_FONT_SIZE;
 		const result = v1TerminalCache.updateAppearance(paneId, family, size);
 		if (result?.changed) {

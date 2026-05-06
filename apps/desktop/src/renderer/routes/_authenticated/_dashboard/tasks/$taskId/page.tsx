@@ -10,14 +10,15 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { MarkdownEditor } from "renderer/components/MarkdownEditor";
 import { apiTrpcClient } from "renderer/lib/api-trpc-client";
+import { useOptimisticCollectionActions } from "renderer/routes/_authenticated/hooks/useOptimisticCollectionActions";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import { Route as TasksLayoutRoute } from "../layout";
 import { ActivitySection } from "./components/ActivitySection";
 import { EditableTitle } from "./components/EditableTitle";
 import { PropertiesSidebar } from "./components/PropertiesSidebar";
 import { TaskDetailHeader } from "./components/TaskDetailHeader";
-import { TaskMarkdownRenderer } from "./components/TaskMarkdownRenderer";
 import { useEscapeToNavigate } from "./hooks/useEscapeToNavigate";
 
 export const Route = createFileRoute(
@@ -37,6 +38,7 @@ function TaskDetailPage() {
 	const { tab, assignee, search } = TasksLayoutRoute.useSearch();
 	const navigate = useNavigate();
 	const collections = useCollections();
+	const { tasks: taskActions } = useOptimisticCollectionActions();
 	const isUuidTaskId =
 		/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
 			taskId,
@@ -108,16 +110,12 @@ function TaskDetailPage() {
 
 	const handleSaveTitle = (title: string) => {
 		if (!task) return;
-		collections.tasks.update(task.id, (draft) => {
-			draft.title = title;
-		});
+		taskActions.updateTitle(task.id, title);
 	};
 
 	const handleSaveDescription = (markdown: string) => {
 		if (!task) return;
-		collections.tasks.update(task.id, (draft) => {
-			draft.description = markdown;
-		});
+		taskActions.updateDescription(task.id, markdown);
 	};
 
 	const handleDelete = () => {
@@ -156,7 +154,7 @@ function TaskDetailPage() {
 					<div className="px-6 py-6 max-w-4xl">
 						<EditableTitle value={task.title} onSave={handleSaveTitle} />
 
-						<TaskMarkdownRenderer
+						<MarkdownEditor
 							content={task.description ?? ""}
 							onSave={handleSaveDescription}
 						/>

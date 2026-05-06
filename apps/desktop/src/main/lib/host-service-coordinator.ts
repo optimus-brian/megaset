@@ -2,12 +2,12 @@ import * as childProcess from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { EventEmitter } from "node:events";
 import * as fs from "node:fs";
-import { createServer } from "node:net";
 import path from "node:path";
 import { settings } from "@superset/local-db";
-import { getDeviceName, getHashedDeviceId } from "@superset/shared/device-info";
+import { getHostId, getHostName } from "@superset/shared/host-info";
 import { app } from "electron";
 import { env } from "main/env.main";
+import semver from "semver";
 import { env as sharedEnv } from "shared/env.shared";
 import { getProcessEnvWithShellPath } from "../../lib/trpc/routers/workspaces/utils/shell-env";
 import { SUPERSET_HOME_DIR } from "./app-environment";
@@ -19,11 +19,49 @@ import {
 	readManifest,
 	removeManifest,
 } from "./host-service-manifest";
+import {
+	findFreePort,
+	HEALTH_POLL_TIMEOUT_MS,
+	MAX_HOST_LOG_BYTES,
+	openRotatingLogFd,
+	pollHealthCheck,
+} from "./host-service-utils";
 import { localDb } from "./local-db";
 import { HOOK_PROTOCOL_VERSION } from "./terminal/env";
 
-/** Minimum host-service version this app can work with. */
-const MIN_HOST_SERVICE_VERSION = "0.1.0";
+/**
+ * Minimum host-service version this app can work with. Bumping this forces
+ * the coordinator to kill + respawn any adopted service older than this,
+ * which is how we prevent the renderer from talking to a stale host-service
+ * that's missing newly-added procedures/params.
+ *
+ * 0.4.0: terminal launch moved from `terminal.ensureSession` to
+ * `terminal.launchSession` plus WebSocket attach params.
+ * 0.3.0: host-service registers via cloud `host.ensure` (was
+ * `device.ensureV2Host`); v2_hosts/v2_users_hosts/v2_workspaces use
+ * machineId text instead of uuid surrogates.
+ * 0.2.0: `workspaceCreation.adopt` gained optional `worktreePath`.
+ *
+ * 0.5.0 — pty-daemon supervision migrated into host-service. New
+ * `terminal.daemon` tRPC namespace; older 0.4.x host-services don't
+ * expose it. Adopting one in place would leave the new desktop
+ * talking to old code: Settings → Manage daemon would silently
+ * fail, and the v2 PTY survival promise is broken. Bumping the
+ * floor forces the coordinator's `tryAdopt` (host-service-coordinator
+ * line ~308) to SIGTERM old host-services on first launch and
+ * respawn with the new bundle. One-time terminal-session loss for
+ * users on upgrade — accepted per release-notes guidance.
+ *
+ * 0.7.0 — canonical `workspaces.create` flow + `settings.hostAgentConfigs`
+ * router (PR1, #3893). Older 0.6.x host-services don't expose either,
+ * so adopting one in place would break new-project creation and the
+ * agent-config settings UI. Force respawn on first launch.
+ *
+ * 0.8.0 — v2 terminal creation moved to `terminal.createSession`; the
+ * WebSocket route is attach-only by `terminalId`. Older host-services would
+ * reject the renderer's creation call and still expect socket-side startup.
+ */
+const MIN_HOST_SERVICE_VERSION = "0.8.0";
 
 export type HostServiceStatus = "starting" | "running" | "stopped";
 
@@ -51,49 +89,7 @@ interface HostServiceProcess {
 	status: HostServiceStatus;
 }
 
-const HEALTH_POLL_INTERVAL = 200;
-const HEALTH_POLL_TIMEOUT = 10_000;
 const ADOPTED_LIVENESS_INTERVAL = 5_000;
-
-async function findFreePort(): Promise<number> {
-	return new Promise((resolve, reject) => {
-		const server = createServer();
-		server.listen(0, "127.0.0.1", () => {
-			const addr = server.address();
-			if (addr && typeof addr === "object") {
-				const { port } = addr;
-				server.close(() => resolve(port));
-			} else {
-				server.close(() => reject(new Error("Could not get port")));
-			}
-		});
-		server.on("error", reject);
-	});
-}
-
-async function pollHealthCheck(
-	endpoint: string,
-	secret: string,
-	timeoutMs = HEALTH_POLL_TIMEOUT,
-): Promise<boolean> {
-	const deadline = Date.now() + timeoutMs;
-	while (Date.now() < deadline) {
-		try {
-			const controller = new AbortController();
-			const timeout = setTimeout(() => controller.abort(), 2_000);
-			const res = await fetch(`${endpoint}/trpc/health.check`, {
-				signal: controller.signal,
-				headers: { Authorization: `Bearer ${secret}` },
-			});
-			clearTimeout(timeout);
-			if (res.ok) return true;
-		} catch {
-			// Not ready yet
-		}
-		await new Promise((r) => setTimeout(r, HEALTH_POLL_INTERVAL));
-	}
-	return false;
-}
 
 export class HostServiceCoordinator extends EventEmitter {
 	private instances = new Map<string, HostServiceProcess>();
@@ -103,8 +99,12 @@ export class HostServiceCoordinator extends EventEmitter {
 		ReturnType<typeof setInterval>
 	>();
 	private scriptPath = path.join(__dirname, "host-service.js");
-	private machineId = getHashedDeviceId();
+	private machineId = getHostId();
 	private devReloadWatcher: fs.FSWatcher | null = null;
+	// Note: pty-daemon supervision moved into host-service itself —
+	// see packages/host-service/src/daemon. Host-service spawns and adopts
+	// the daemon when it boots, so the desktop coordinator no longer needs
+	// to know about it.
 
 	async start(
 		organizationId: string,
@@ -323,9 +323,15 @@ export class HostServiceCoordinator extends EventEmitter {
 			manifest.endpoint,
 			manifest.authToken,
 		);
-		if (version && version < MIN_HOST_SERVICE_VERSION) {
+		if (
+			!version ||
+			!semver.satisfies(version, `>=${MIN_HOST_SERVICE_VERSION}`)
+		) {
+			const reason = version
+				? `version ${version} < ${MIN_HOST_SERVICE_VERSION}`
+				: "version unknown";
 			console.log(
-				`[host-service:${organizationId}] Adopted service version ${version} < ${MIN_HOST_SERVICE_VERSION}, killing`,
+				`[host-service:${organizationId}] Adopted service ${reason}, killing`,
 			);
 			try {
 				process.kill(manifest.pid, "SIGTERM");
@@ -363,7 +369,8 @@ export class HostServiceCoordinator extends EventEmitter {
 			clearTimeout(timeout);
 			if (!response.ok) return null;
 			const data = await response.json();
-			return data?.result?.data?.version ?? null;
+			const result = data?.result?.data;
+			return result?.json?.version ?? result?.version ?? null;
 		} catch {
 			return null;
 		}
@@ -401,11 +408,59 @@ export class HostServiceCoordinator extends EventEmitter {
 		this.instances.set(organizationId, instance);
 		this.emitStatus(organizationId, "starting", null);
 
-		const env = await this.buildEnv(organizationId, port, secret, config);
-		const child = childProcess.spawn(process.execPath, [this.scriptPath], {
-			stdio: ["ignore", "pipe", "pipe"],
-			env,
-		});
+		// pty-daemon is supervised by host-service itself; this coordinator
+		// only spawns host-service and steps out. See
+		// packages/host-service/src/daemon for the supervisor lifecycle.
+		const childEnv = await this.buildEnv(organizationId, port, secret, config);
+		// Host-service owns v2 PTYs, so it must survive Electron restarts in
+		// every environment. This mirrors the terminal-host daemon: detach the
+		// child and back stdio with real files so parent teardown cannot close
+		// pipes and take the service down with the app.
+		const logFd = openRotatingLogFd(
+			path.join(manifestDir(organizationId), "host-service.log"),
+			MAX_HOST_LOG_BYTES,
+		);
+		// Dev: pipe child stdout/stderr through this process so log lines
+		// land in the developer's `bun dev` terminal. Production: hard-back
+		// stdio with the rotating log file so the detached child survives
+		// parent teardown without losing logs.
+		const isDev = !app.isPackaged;
+		const stdio: childProcess.StdioOptions = isDev
+			? ["ignore", "pipe", "pipe"]
+			: logFd >= 0
+				? ["ignore", logFd, logFd]
+				: ["ignore", "ignore", "ignore"];
+
+		let child: ReturnType<typeof childProcess.spawn>;
+		try {
+			// Prod: detached so PTYs survive Electron restarts via manifest
+			// adoption (HOST_SERVICE_LIFECYCLE.md). Dev: attached so a `bun dev`
+			// kill propagates and serve.ts's dev shutdown can stop pty-daemon.
+			child = childProcess.spawn(process.execPath, [this.scriptPath], {
+				detached: !isDev,
+				stdio,
+				env: childEnv,
+				// Avoid a flashing CMD window on Windows.
+				windowsHide: true,
+			});
+		} finally {
+			if (logFd >= 0) {
+				try {
+					fs.closeSync(logFd);
+				} catch {
+					// Best-effort — child has its own dup of the fd.
+				}
+			}
+		}
+
+		// In dev, fan child output through to parent stdout/stderr with a
+		// prefix so it's identifiable in `bun dev`. The detached child has
+		// its own session, so closing pipes won't kill it on parent exit.
+		if (isDev && child.stdout && child.stderr) {
+			const tag = `[hs:${organizationId.slice(0, 8)}]`;
+			pipeWithPrefix(child.stdout, process.stdout, tag);
+			pipeWithPrefix(child.stderr, process.stderr, tag);
+		}
 
 		const childPid = child.pid;
 		if (!childPid) {
@@ -414,15 +469,6 @@ export class HostServiceCoordinator extends EventEmitter {
 		}
 
 		instance.pid = childPid;
-
-		child.stdout?.on("data", (data: Buffer) => {
-			console.log(`[host-service:${organizationId}] ${data.toString().trim()}`);
-		});
-		child.stderr?.on("data", (data: Buffer) => {
-			console.error(
-				`[host-service:${organizationId}] ${data.toString().trim()}`,
-			);
-		});
 		child.on("exit", (code) => {
 			console.log(`[host-service:${organizationId}] exited with code ${code}`);
 			const current = this.instances.get(organizationId);
@@ -433,7 +479,7 @@ export class HostServiceCoordinator extends EventEmitter {
 			removeManifest(organizationId);
 			this.emitStatus(organizationId, "stopped", "running");
 		});
-		child.unref();
+		if (!isDev) child.unref();
 
 		const endpoint = `http://127.0.0.1:${port}`;
 		const healthy = await pollHealthCheck(endpoint, secret);
@@ -441,7 +487,7 @@ export class HostServiceCoordinator extends EventEmitter {
 			child.kill("SIGTERM");
 			this.instances.delete(organizationId);
 			throw new Error(
-				`Host service failed to start within ${HEALTH_POLL_TIMEOUT}ms`,
+				`Host service failed to start within ${HEALTH_POLL_TIMEOUT_MS}ms`,
 			);
 		}
 
@@ -466,8 +512,8 @@ export class HostServiceCoordinator extends EventEmitter {
 			...(process.env as Record<string, string>),
 			ELECTRON_RUN_AS_NODE: "1",
 			ORGANIZATION_ID: organizationId,
-			DEVICE_CLIENT_ID: getHashedDeviceId(),
-			DEVICE_NAME: getDeviceName(),
+			HOST_CLIENT_ID: getHostId(),
+			HOST_NAME: getHostName(),
 			HOST_SERVICE_SECRET: secret,
 			HOST_SERVICE_PORT: String(port),
 			HOST_MANIFEST_DIR: organizationDir,
@@ -480,7 +526,7 @@ export class HostServiceCoordinator extends EventEmitter {
 			SUPERSET_AGENT_HOOK_PORT: String(sharedEnv.DESKTOP_NOTIFICATIONS_PORT),
 			SUPERSET_AGENT_HOOK_VERSION: HOOK_PROTOCOL_VERSION,
 			AUTH_TOKEN: config.authToken,
-			CLOUD_API_URL: config.cloudApiUrl,
+			SUPERSET_API_URL: config.cloudApiUrl,
 		});
 
 		// `getProcessEnvWithShellPath` merges in the user's interactive shell env,
@@ -538,6 +584,33 @@ export class HostServiceCoordinator extends EventEmitter {
 			previousStatus,
 		} satisfies HostServiceStatusEvent);
 	}
+}
+
+/**
+ * Forward child stdout/stderr to a parent stream with a per-line prefix.
+ * Plain `chunk => parent.write(`${tag} ${chunk}`)` only prefixes the first
+ * line in a chunk and breaks visual scanning when child output bursts.
+ */
+function pipeWithPrefix(
+	source: NodeJS.ReadableStream,
+	target: NodeJS.WritableStream,
+	tag: string,
+): void {
+	let pending = "";
+	source.on("data", (chunk: Buffer) => {
+		const text = pending + chunk.toString("utf8");
+		const lines = text.split("\n");
+		// Last element is a partial line if input doesn't end with \n;
+		// stash it for the next chunk.
+		pending = lines.pop() ?? "";
+		for (const line of lines) {
+			target.write(`${tag} ${line}\n`);
+		}
+	});
+	source.on("end", () => {
+		if (pending) target.write(`${tag} ${pending}\n`);
+		pending = "";
+	});
 }
 
 let coordinator: HostServiceCoordinator | null = null;

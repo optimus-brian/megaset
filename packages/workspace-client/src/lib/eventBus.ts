@@ -1,10 +1,17 @@
 import type {
+	AgentLifecycleEventType,
 	ClientMessage,
 	ServerMessage,
 } from "@superset/host-service/events";
 import type { FsWatchEvent } from "@superset/workspace-fs/host";
+import { primeRelayAffinity } from "./primeRelayAffinity";
 
-type EventType = "fs:events" | "git:changed";
+type EventType =
+	| "fs:events"
+	| "git:changed"
+	| "agent:lifecycle"
+	| "terminal:lifecycle"
+	| "port:changed";
 
 interface FsEventsPayload {
 	events: FsWatchEvent[];
@@ -18,11 +25,40 @@ export interface GitChangedPayload {
 	paths?: string[];
 }
 
+export interface AgentLifecyclePayload {
+	eventType: AgentLifecycleEventType;
+	terminalId: string;
+	occurredAt: number;
+}
+
+export interface TerminalLifecyclePayload {
+	eventType: "exit";
+	terminalId: string;
+	exitCode: number;
+	signal: number;
+	occurredAt: number;
+}
+
+type PortChangedMessage = Extract<ServerMessage, { type: "port:changed" }>;
+
+export interface PortChangedPayload {
+	eventType: PortChangedMessage["eventType"];
+	port: PortChangedMessage["port"];
+	label: PortChangedMessage["label"];
+	occurredAt: number;
+}
+
 type EventListener<T extends EventType> = T extends "fs:events"
 	? (workspaceId: string, payload: FsEventsPayload) => void
 	: T extends "git:changed"
 		? (workspaceId: string, payload: GitChangedPayload) => void
-		: never;
+		: T extends "agent:lifecycle"
+			? (workspaceId: string, payload: AgentLifecyclePayload) => void
+			: T extends "terminal:lifecycle"
+				? (workspaceId: string, payload: TerminalLifecyclePayload) => void
+				: T extends "port:changed"
+					? (workspaceId: string, payload: PortChangedPayload) => void
+					: never;
 
 interface ListenerEntry {
 	type: EventType;
@@ -67,7 +103,9 @@ function handleMessage(state: ConnectionState, data: unknown): void {
 	}
 
 	if (message.type === "error") {
-		console.error("[event-bus-client]", message.message);
+		// Server-side bus errors aren't actionable from the client; the
+		// reconnect loop already handles transient failures, and logging
+		// here just floods the console when a host bounces offline.
 		return;
 	}
 
@@ -75,7 +113,11 @@ function handleMessage(state: ConnectionState, data: unknown): void {
 		if (entry.type !== message.type) continue;
 
 		const workspaceId =
-			message.type === "fs:events" || message.type === "git:changed"
+			message.type === "fs:events" ||
+			message.type === "git:changed" ||
+			message.type === "agent:lifecycle" ||
+			message.type === "terminal:lifecycle" ||
+			message.type === "port:changed"
 				? message.workspaceId
 				: null;
 
@@ -95,6 +137,33 @@ function handleMessage(state: ConnectionState, data: unknown): void {
 			(entry.callback as EventListener<"git:changed">)(message.workspaceId, {
 				paths: message.paths,
 			});
+		} else if (message.type === "agent:lifecycle") {
+			(entry.callback as EventListener<"agent:lifecycle">)(
+				message.workspaceId,
+				{
+					eventType: message.eventType,
+					terminalId: message.terminalId,
+					occurredAt: message.occurredAt,
+				},
+			);
+		} else if (message.type === "terminal:lifecycle") {
+			(entry.callback as EventListener<"terminal:lifecycle">)(
+				message.workspaceId,
+				{
+					eventType: message.eventType,
+					terminalId: message.terminalId,
+					exitCode: message.exitCode,
+					signal: message.signal,
+					occurredAt: message.occurredAt,
+				},
+			);
+		} else if (message.type === "port:changed") {
+			(entry.callback as EventListener<"port:changed">)(message.workspaceId, {
+				eventType: message.eventType,
+				port: message.port,
+				label: message.label,
+				occurredAt: message.occurredAt,
+			});
 		}
 	}
 }
@@ -107,31 +176,44 @@ function connect(
 	if (state.disposed) return;
 
 	const wsUrl = buildEventBusUrl(hostUrl, getWsToken());
-	const socket = new WebSocket(wsUrl);
-	state.socket = socket;
-
-	socket.onopen = () => {
-		state.reconnectAttempts = 0;
-
-		// Re-send all active fs:watch commands
-		for (const workspaceId of state.fsWatchedWorkspaces.keys()) {
-			sendCommand(state, { type: "fs:watch", workspaceId });
+	// Pre-flight an HTTP request to lock fly's edge affinity to the owning
+	// machine before the WS upgrade. fly-replay isn't transparent to all WS
+	// clients on the upgrade itself, but is on plain HTTP, so a quick GET
+	// avoids the connect → 1006 close → reconnect flicker.
+	void primeRelayAffinity(wsUrl).then(() => {
+		if (state.disposed || state.socket) return;
+		let socket: WebSocket;
+		try {
+			socket = new WebSocket(wsUrl);
+		} catch {
+			scheduleReconnect(state, hostUrl, getWsToken);
+			return;
 		}
-	};
+		state.socket = socket;
 
-	socket.onmessage = (event) => {
-		handleMessage(state, event.data);
-	};
+		socket.onopen = () => {
+			state.reconnectAttempts = 0;
 
-	socket.onclose = () => {
-		if (state.disposed) return;
-		state.socket = null;
-		scheduleReconnect(state, hostUrl, getWsToken);
-	};
+			// Re-send all active fs:watch commands
+			for (const workspaceId of state.fsWatchedWorkspaces.keys()) {
+				sendCommand(state, { type: "fs:watch", workspaceId });
+			}
+		};
 
-	socket.onerror = () => {
-		// onclose will fire after onerror
-	};
+		socket.onmessage = (event) => {
+			handleMessage(state, event.data);
+		};
+
+		socket.onclose = () => {
+			if (state.disposed) return;
+			state.socket = null;
+			scheduleReconnect(state, hostUrl, getWsToken);
+		};
+
+		socket.onerror = () => {
+			// onclose will fire after onerror
+		};
+	});
 }
 
 function scheduleReconnect(

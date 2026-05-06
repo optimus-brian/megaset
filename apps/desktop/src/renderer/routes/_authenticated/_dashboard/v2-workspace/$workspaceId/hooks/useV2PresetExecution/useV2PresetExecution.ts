@@ -1,14 +1,18 @@
 import type { CreatePaneInput, WorkspaceStore } from "@superset/panes";
 import { toast } from "@superset/ui/sonner";
-import { workspaceTrpc } from "@superset/workspace-client";
 import { useLiveQuery } from "@tanstack/react-db";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
+import { useV2AgentConfigs } from "renderer/hooks/useV2AgentConfigs";
+import { buildAgentLaunchCommand } from "renderer/lib/agent-launch-command";
+import { useWorkspace } from "renderer/routes/_authenticated/_dashboard/v2-workspace/providers/WorkspaceProvider";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import type { V2TerminalPresetRow } from "renderer/routes/_authenticated/providers/CollectionsProvider/dashboardSidebarLocal";
+import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
 import { getPresetLaunchPlan } from "renderer/stores/tabs/preset-launch";
 import { filterMatchingPresetsForProject } from "shared/preset-project-targeting";
 import type { StoreApi } from "zustand/vanilla";
 import type { PaneViewerData, TerminalPaneData } from "../../types";
+import type { TerminalLauncher } from "../useV2TerminalLauncher";
 
 function makeTerminalPane(
 	terminalId: string,
@@ -27,19 +31,16 @@ function resolveTarget(executionMode: V2TerminalPresetRow["executionMode"]) {
 
 interface UseV2PresetExecutionArgs {
 	store: StoreApi<WorkspaceStore<PaneViewerData>>;
-	workspaceId: string;
-	projectId: string;
+	launcher: TerminalLauncher;
 }
 
 export function useV2PresetExecution({
 	store,
-	workspaceId,
-	projectId,
+	launcher,
 }: UseV2PresetExecutionArgs) {
+	const { workspace } = useWorkspace();
+	const projectId = workspace.projectId;
 	const collections = useCollections();
-	const ensureSession = workspaceTrpc.terminal.ensureSession.useMutation();
-	const ensureSessionRef = useRef(ensureSession);
-	ensureSessionRef.current = ensureSession;
 
 	const { data: allPresets = [] } = useLiveQuery(
 		(query) =>
@@ -49,23 +50,37 @@ export function useV2PresetExecution({
 		[collections],
 	);
 
+	// Read v2 agent configs from the host service — same data source as the
+	// /settings/agents page, so user edits there propagate here. The hook is
+	// already invalidated by mutations in the agents settings page.
+	const { activeHostUrl } = useLocalHostService();
+	const { data: agents = [] } = useV2AgentConfigs(activeHostUrl);
+
+	// Map presetId → command (first match wins if the user has multiple
+	// host configs for the same preset).
+	const agentCommandsById = useMemo(() => {
+		const map = new Map<string, string>();
+		for (const agent of agents) {
+			if (agent.command.trim().length === 0) continue;
+			if (map.has(agent.presetId)) continue;
+			map.set(agent.presetId, buildAgentLaunchCommand(agent));
+		}
+		return map;
+	}, [agents]);
+
 	const matchedPresets = useMemo(
 		() => filterMatchingPresetsForProject(allPresets, projectId),
 		[allPresets, projectId],
 	);
 
-	/** Create a terminal session with a command on the host-service, return the terminalId. */
-	const createSessionWithCommand = useCallback(
-		async (command: string): Promise<string> => {
-			const terminalId = crypto.randomUUID();
-			await ensureSessionRef.current.mutateAsync({
-				terminalId,
-				workspaceId,
-				initialCommand: command,
-			});
-			return terminalId;
+	const resolvePresetCommands = useCallback(
+		(preset: V2TerminalPresetRow): string[] => {
+			if (!preset.agentId) return preset.commands;
+			const live = agentCommandsById.get(preset.agentId);
+			if (live) return [live];
+			return preset.commands;
 		},
-		[workspaceId],
+		[agentCommandsById],
 	);
 
 	const executePreset = useCallback(
@@ -73,110 +88,84 @@ export function useV2PresetExecution({
 			const state = store.getState();
 			const activeTabId = state.activeTabId;
 			const target = resolveTarget(preset.executionMode);
+			const title = preset.name || undefined;
+			const commands = resolvePresetCommands(preset);
 
 			const plan = getPresetLaunchPlan({
 				mode: preset.executionMode,
 				target,
-				commandCount: preset.commands.length,
+				commandCount: commands.length,
 				hasActiveTab: !!activeTabId,
 			});
 
+			// Sessions for every pane this plan creates are spun up in parallel
+			// before any of them land in the store, so background tabs (e.g.
+			// new-tab-per-command, where each addTab flips activeTabId and only
+			// the last tab ever mounts) still get their PTY + initial command —
+			// host-service buffers PTY output until the user clicks the tab and
+			// the pane finally mounts and attaches the WS.
 			try {
 				switch (plan) {
 					case "new-tab-single": {
-						const id = await createSessionWithCommand(
-							preset.commands[0] as string,
-						);
-						state.addTab({
-							panes: [makeTerminalPane(id, preset.name || undefined)],
-						});
+						const terminalId = await launcher.create({ command: commands[0] });
+						state.addTab({ panes: [makeTerminalPane(terminalId, title)] });
 						break;
 					}
 
 					case "new-tab-multi-pane": {
 						const ids = await Promise.all(
-							preset.commands.map((cmd) => createSessionWithCommand(cmd)),
-						);
-						const panes = ids.map((id) =>
-							makeTerminalPane(id, preset.name || undefined),
+							commands.length > 0
+								? commands.map((command) => launcher.create({ command }))
+								: [launcher.create()],
 						);
 						state.addTab({
-							panes:
-								panes.length > 0
-									? (panes as [
-											CreatePaneInput<PaneViewerData>,
-											...CreatePaneInput<PaneViewerData>[],
-										])
-									: [
-											makeTerminalPane(
-												crypto.randomUUID(),
-												preset.name || undefined,
-											),
-										],
+							panes: ids.map((id) => makeTerminalPane(id, title)) as [
+								CreatePaneInput<PaneViewerData>,
+								...CreatePaneInput<PaneViewerData>[],
+							],
 						});
 						break;
 					}
 
 					case "new-tab-per-command": {
 						const ids = await Promise.all(
-							preset.commands.map((cmd) => createSessionWithCommand(cmd)),
+							commands.map((command) => launcher.create({ command })),
 						);
-						for (let i = 0; i < ids.length; i++) {
-							state.addTab({
-								panes: [
-									makeTerminalPane(ids[i] as string, preset.name || undefined),
-								],
-							});
+						for (const terminalId of ids) {
+							state.addTab({ panes: [makeTerminalPane(terminalId, title)] });
 						}
 						break;
 					}
 
 					case "active-tab-single": {
-						const id = await createSessionWithCommand(
-							preset.commands[0] as string,
-						);
+						const terminalId = await launcher.create({ command: commands[0] });
+						const pane = makeTerminalPane(terminalId, title);
 						if (!activeTabId) {
-							state.addTab({
-								panes: [makeTerminalPane(id, preset.name || undefined)],
-							});
+							state.addTab({ panes: [pane] });
 							break;
 						}
-						state.addPane({
-							tabId: activeTabId,
-							pane: makeTerminalPane(id, preset.name || undefined),
-						});
+						state.addPane({ tabId: activeTabId, pane });
 						break;
 					}
 
 					case "active-tab-multi-pane": {
 						const ids = await Promise.all(
-							preset.commands.map((cmd) => createSessionWithCommand(cmd)),
+							commands.length > 0
+								? commands.map((command) => launcher.create({ command }))
+								: [launcher.create()],
 						);
+						const panes = ids.map((id) => makeTerminalPane(id, title));
 						if (!activeTabId) {
-							const panes = ids.map((id) =>
-								makeTerminalPane(id, preset.name || undefined),
-							);
 							state.addTab({
-								panes:
-									panes.length > 0
-										? (panes as [
-												CreatePaneInput<PaneViewerData>,
-												...CreatePaneInput<PaneViewerData>[],
-											])
-										: [
-												makeTerminalPane(
-													crypto.randomUUID(),
-													preset.name || undefined,
-												),
-											],
+								panes: panes as [
+									CreatePaneInput<PaneViewerData>,
+									...CreatePaneInput<PaneViewerData>[],
+								],
 							});
 							break;
 						}
-						for (const id of ids) {
-							state.addPane({
-								tabId: activeTabId,
-								pane: makeTerminalPane(id, preset.name || undefined),
-							});
+						for (const pane of panes) {
+							state.addPane({ tabId: activeTabId, pane });
 						}
 						break;
 					}
@@ -191,7 +180,7 @@ export function useV2PresetExecution({
 				});
 			}
 		},
-		[store, createSessionWithCommand],
+		[store, launcher, resolvePresetCommands],
 	);
 
 	return { matchedPresets, executePreset };

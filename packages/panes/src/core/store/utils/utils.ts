@@ -23,26 +23,29 @@ export function findFirstPaneId(node: LayoutNode): string | null {
 	return findFirstPaneId(node.first) ?? findFirstPaneId(node.second);
 }
 
-export function findSiblingPaneId(
-	node: LayoutNode,
-	paneId: string,
+export function getPaneIdsInLayout(node: LayoutNode): string[] {
+	if (node.type === "pane") {
+		return [node.paneId];
+	}
+	return [
+		...getPaneIdsInLayout(node.first),
+		...getPaneIdsInLayout(node.second),
+	];
+}
+
+export function getActiveIdAfterRemoval(
+	orderedIds: readonly string[],
+	activeId: string | null | undefined,
+	removedId: string,
 ): string | null {
-	if (node.type === "pane") return null;
-
-	const inFirst = findPaneInLayout(node.first, paneId);
-	const inSecond = findPaneInLayout(node.second, paneId);
-
-	if (inFirst && !inSecond) {
-		// Target is in the first branch — sibling is the nearest pane in second
-		const deeper = findSiblingPaneId(node.first, paneId);
-		return deeper ?? findFirstPaneId(node.second);
-	}
-	if (inSecond && !inFirst) {
-		const deeper = findSiblingPaneId(node.second, paneId);
-		return deeper ?? findFirstPaneId(node.first);
+	if (activeId !== removedId) {
+		return activeId ?? null;
 	}
 
-	return null;
+	const removedIndex = orderedIds.indexOf(removedId);
+	return removedIndex === -1
+		? (orderedIds[0] ?? null)
+		: (orderedIds[removedIndex + 1] ?? orderedIds[removedIndex - 1] ?? null);
 }
 
 export function removePaneFromLayout(
@@ -206,6 +209,16 @@ function findEdgePaneId(
 	}
 	const [alignedBranch = "first", ...rest] = alignmentPath;
 	return findEdgePaneId(node[alignedBranch], dir, rest);
+}
+
+export function getPaneParentDirection(
+	root: LayoutNode,
+	paneId: string,
+): SplitDirection | null {
+	const path = findPanePath(root, paneId);
+	if (!path || path.length === 0) return null;
+	const parent = getNodeAtPath(root, path.slice(0, -1));
+	return parent && parent.type === "split" ? parent.direction : null;
 }
 
 export function getSpatialNeighborPaneId(

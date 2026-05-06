@@ -12,10 +12,6 @@ import {
 	getPresetIcon,
 	useIsDarkTheme,
 } from "renderer/assets/app-icons/preset-icons";
-import type {
-	AgentDefinitionId,
-	ResolvedAgentConfig,
-} from "shared/utils/agent-settings";
 
 const CONFIGURE_AGENTS_VALUE = "__configure_agents__";
 
@@ -26,8 +22,16 @@ export interface AgentSelectExtraOption {
 	icon?: ReactNode;
 }
 
+// v1 callers' `id` doubles as the icon key. v2 ids are UUIDs, so v2 callers
+// pass `iconId: presetId` to keep the preset-keyed icon lookup working.
+export interface AgentSelectAgent {
+	id: string;
+	label: string;
+	iconId?: string;
+}
+
 interface AgentSelectProps<T extends string> {
-	agents: ResolvedAgentConfig[];
+	agents: AgentSelectAgent[];
 	value?: T;
 	placeholder: string;
 	onValueChange: (value: T) => void;
@@ -59,17 +63,15 @@ export function AgentSelect<T extends string>({
 }: AgentSelectProps<T>) {
 	const navigate = useNavigate();
 	const isDark = useIsDarkTheme();
-	const selectableIds = new Set<AgentDefinitionId>(
-		agents.map((agent) => agent.id),
-	);
+	const selectableIds = new Set<string>(agents.map((agent) => agent.id));
 	const extraIds = new Set<string>(
 		(extraOptions ?? []).map((opt) => opt.value),
 	);
 	const selectedValue =
 		value != null &&
 		((allowNone && value === noneValue) ||
-			selectableIds.has(value as AgentDefinitionId) ||
-			extraIds.has(value as string))
+			selectableIds.has(value) ||
+			extraIds.has(value))
 			? value
 			: undefined;
 	const showSeparator =
@@ -108,7 +110,7 @@ export function AgentSelect<T extends string>({
 					</SelectItem>
 				))}
 				{agents.map((agent) => {
-					const icon = getPresetIcon(agent.id, isDark);
+					const icon = getPresetIcon(agent.iconId ?? agent.id, isDark);
 					return (
 						<SelectItem key={agent.id} value={agent.id}>
 							<span className="flex items-center gap-2">
