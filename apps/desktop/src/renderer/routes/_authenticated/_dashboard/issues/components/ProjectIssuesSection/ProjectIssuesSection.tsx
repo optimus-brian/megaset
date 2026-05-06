@@ -24,7 +24,7 @@ export function ProjectIssuesSection({
 	const { data, isLoading } =
 		electronTrpc.gitProviders.listIssuesForProject.useQuery(
 			{ projectId, state: "all" },
-			{ refetchInterval: 60_000 },
+			{ refetchInterval: 10_000, refetchIntervalInBackground: true },
 		);
 	const statesQuery =
 		electronTrpc.gitProviders.listIssueStatesForProject.useQuery({

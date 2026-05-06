@@ -136,7 +136,7 @@ export function IssueDetailSidebar({
 	const commentsQuery =
 		electronTrpc.gitProviders.listIssueCommentsForProject.useQuery(
 			{ projectId, number: issue.number },
-			{ refetchInterval: 60_000 },
+			{ refetchInterval: 10_000, refetchIntervalInBackground: true },
 		);
 	const comments = commentsQuery.data?.comments ?? [];
 
