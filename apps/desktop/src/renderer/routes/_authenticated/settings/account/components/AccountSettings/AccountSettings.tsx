@@ -14,6 +14,7 @@ import {
 	getImageExtensionFromMimeType,
 	parseBase64DataUrl,
 } from "shared/file-types";
+import { useSettingsSections } from "../../../utils/settings-section-registry";
 import {
 	isItemVisible,
 	SETTING_ITEM_ID,
@@ -38,6 +39,7 @@ export function AccountSettings({ visibleItems }: AccountSettingsProps) {
 	const { data: session } = authClient.useSession();
 	const currentUserId = session?.user?.id;
 	const collections = useCollections();
+	const forkSections = useSettingsSections("account");
 
 	const [nameValue, setNameValue] = useState("");
 	const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -182,8 +184,20 @@ export function AccountSettings({ visibleItems }: AccountSettingsProps) {
 					</div>
 				)}
 
+				{forkSections.length > 0 && (
+					<div className={showProfile ? "pt-6 border-t space-y-6" : "space-y-6"}>
+						{forkSections.map((section) => (
+							<div key={section.id}>{section.render()}</div>
+						))}
+					</div>
+				)}
+
 				{showSignOut && (
-					<div className={showProfile ? "pt-6 border-t" : ""}>
+					<div
+						className={
+							showProfile || forkSections.length > 0 ? "pt-6 border-t" : ""
+						}
+					>
 						<h3 className="text-sm font-medium mb-2">Sign Out</h3>
 						<p className="text-sm text-muted-foreground mb-4">
 							Sign out of your Superset account on this device.

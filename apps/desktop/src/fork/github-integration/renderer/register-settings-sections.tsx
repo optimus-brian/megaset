@@ -6,7 +6,7 @@ import { GitHubAuthCard } from "./GitHubAuthCard";
 // provider, so it owns the header and renders first.
 registerSettingsSection({
 	id: "git-providers-header",
-	page: "git",
+	page: "account",
 	order: 90,
 	render: () => (
 		<div className="space-y-0.5">
@@ -21,7 +21,7 @@ registerSettingsSection({
 
 registerSettingsSection({
 	id: "github-auth",
-	page: "git",
+	page: "account",
 	order: 100,
 	render: () => <GitHubAuthCard />,
 });

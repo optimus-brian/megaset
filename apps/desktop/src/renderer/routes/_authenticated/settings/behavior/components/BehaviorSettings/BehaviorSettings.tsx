@@ -295,18 +295,12 @@ export function BehaviorSettings({ visibleItems }: BehaviorSettingsProps) {
 					{(
 						[
 							{ key: "tasks", label: "Tasks (Linear)" },
-							{ key: "issues", label: "Issues (GitHub)" },
-							{ key: "repos", label: "Repos (GitHub)" },
+							{ key: "issues", label: "Issues (Git)" },
+							{ key: "repos", label: "Repos (Git)" },
 						] as const
 					).map(({ key, label }) => (
-						<div
-							key={key}
-							className="flex items-center justify-between pl-2"
-						>
-							<Label
-								htmlFor={`module-${key}`}
-								className="text-sm font-normal"
-							>
+						<div key={key} className="flex items-center justify-between pl-2">
+							<Label htmlFor={`module-${key}`} className="text-sm font-normal">
 								{label}
 							</Label>
 							<Switch

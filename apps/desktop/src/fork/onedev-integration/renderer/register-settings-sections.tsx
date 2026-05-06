@@ -3,7 +3,7 @@ import { OnedevAuthCard } from "./OnedevAuthCard";
 
 registerSettingsSection({
 	id: "onedev-auth",
-	page: "git",
+	page: "account",
 	order: 110,
 	render: () => <OnedevAuthCard />,
 });

@@ -3,7 +3,7 @@ import { ForgejoAuthCard } from "./ForgejoAuthCard";
 
 registerSettingsSection({
 	id: "forgejo-auth",
-	page: "git",
+	page: "account",
 	order: 120,
 	render: () => <ForgejoAuthCard />,
 });
