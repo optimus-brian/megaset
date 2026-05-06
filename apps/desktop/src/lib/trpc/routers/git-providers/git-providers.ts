@@ -14,6 +14,13 @@ import { z } from "zod";
 import { publicProcedure, router } from "../..";
 import { execWithShellEnv } from "../workspaces/utils/shell-env";
 
+async function ensureHostsPrimed(): Promise<void> {
+	await Promise.all([
+		primeOnedevHost().catch(() => {}),
+		primeForgejoHost().catch(() => {}),
+	]);
+}
+
 export const createGitProvidersRouter = () => {
 	return router({
 		listIssues: publicProcedure
@@ -24,6 +31,7 @@ export const createGitProvidersRouter = () => {
 				}),
 			)
 			.query(async ({ input }) => {
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(
 					input.remoteUrl,
 				);
@@ -66,6 +74,7 @@ export const createGitProvidersRouter = () => {
 
 				if (!remoteUrl) return { issues: [], provider: null };
 
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
 				if (!provider) return { issues: [], provider: null };
 
@@ -93,6 +102,7 @@ export const createGitProvidersRouter = () => {
 				}),
 			)
 			.mutation(async ({ input }) => {
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(
 					input.remoteUrl,
 				);
@@ -234,6 +244,7 @@ export const createGitProvidersRouter = () => {
 				}
 				if (!remoteUrl) return { subIssues: [], provider: null };
 
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
 				if (!provider?.listSubIssues) {
 					return { subIssues: [], provider: null };
@@ -278,6 +289,7 @@ export const createGitProvidersRouter = () => {
 				}
 				if (!remoteUrl) return { issue: null, provider: null };
 
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
 				if (!provider) return { issue: null, provider: null };
 				try {
@@ -318,6 +330,7 @@ export const createGitProvidersRouter = () => {
 				}
 				if (!remoteUrl) return { states: [], provider: null };
 
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
 				if (!provider?.listIssueStates) {
 					return { states: [], provider: provider?.name ?? null };
@@ -355,6 +368,7 @@ export const createGitProvidersRouter = () => {
 				const remoteUrl = stdout.trim();
 				if (!remoteUrl) throw new Error("No git remote configured");
 
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
 				if (!provider?.setIssueState) {
 					throw new Error("Provider does not support state changes");
@@ -424,6 +438,7 @@ export const createGitProvidersRouter = () => {
 				const remoteUrl = stdout.trim();
 				if (!remoteUrl) throw new Error("No git remote configured");
 
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
 				if (!provider?.setIssueStateById) {
 					throw new Error("Provider does not support setting state by id");
@@ -459,6 +474,7 @@ export const createGitProvidersRouter = () => {
 				const remoteUrl = stdout.trim();
 				if (!remoteUrl) throw new Error("No git remote configured");
 
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
 				if (!provider?.addIssueLabels) {
 					throw new Error("Provider does not support labels");
@@ -494,6 +510,7 @@ export const createGitProvidersRouter = () => {
 				const remoteUrl = stdout.trim();
 				if (!remoteUrl) throw new Error("No git remote configured");
 
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
 				if (!provider?.createIssueComment) {
 					throw new Error("Provider does not support comments");
@@ -533,6 +550,7 @@ export const createGitProvidersRouter = () => {
 				}
 				if (!remoteUrl) return { comments: [], provider: null };
 
+				await ensureHostsPrimed();
 				const provider = gitProviderRegistry.detectFromRemoteUrl(remoteUrl);
 				if (!provider?.listIssueComments)
 					return { comments: [], provider: null };

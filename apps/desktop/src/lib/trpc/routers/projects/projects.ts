@@ -1,10 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { access, mkdir, rm } from "node:fs/promises";
 import { basename, join } from "node:path";
-import {
-	gitProviderRegistry,
-	loadToken,
-} from "@superset/git-provider-core";
+import { gitProviderRegistry, loadToken } from "@superset/git-provider-core";
 import {
 	BRANCH_PREFIX_MODES,
 	EXTERNAL_APPS,
@@ -1300,7 +1297,9 @@ export const createProjectsRouter = (getWindow: () => BrowserWindow | null) => {
 					await git.clone(cloneUrl, clonePath);
 					if (cloneUrl !== input.url) {
 						try {
-							const repoGit = (await getSimpleGitWithShellPath()).cwd(clonePath);
+							const repoGit = (await getSimpleGitWithShellPath()).cwd(
+								clonePath,
+							);
 							await repoGit.remote(["set-url", "origin", input.url]);
 						} catch (err) {
 							console.warn(
